@@ -2,6 +2,7 @@ import numpy as np
 import cvxpy as cp
 from scipy.integrate import solve_ivp
 
+
 class BallbotMPC:
     def __init__(self, Q, R, Qf, nx, nu, u_min, u_max):
         self.Q = Q   # State cost matrix
@@ -18,7 +19,12 @@ class BallbotMPC:
 
         theta_x = x_current[0]
         theta_x_dot = x_current[1]
-        T_YZ = u_current
+        T_YZ = u_current[0]
+
+        theta_y = x_current[4]
+        theta_y_dot = x_current[5]
+        T_XZ = u_current[1]
+
 
         # Compute each element of the matrix YZ_A
         A_cont = np.array([
@@ -38,12 +44,22 @@ class BallbotMPC:
             0]
         ])
 
+        A_cont_upper = np.hstack((A_cont, np.zeros((4, 4))))
+        A_cont_lower = np.hstack((np.zeros((4, 4)), A_cont))
+
+        A_cont = np.vstack((A_cont_upper,A_cont_lower))
+
         B_cont = np.array([  
             [0],
             [0],
             [(0.063*np.cos(theta_x))/(4.0e-3*np.cos(theta_x)**2 - 0.032)],
             [-0.43/(4.0e-3*np.cos(theta_x)**2 - 0.032)]
         ])
+
+        B_cont_left = np.vstack((B_cont,np.zeros((4,1))))
+        B_cont_right = np.vstack((np.zeros((4,1)), B_cont))
+
+        B_cont = np.hstack((B_cont_left,B_cont_right))
 
         return A_cont, B_cont
     def continuous_dynamics(self, x, u, A_cont, B_cont):
@@ -93,22 +109,26 @@ class BallbotMPC:
         u_current = u[0, :].value
 
         # Update x_current using the continuous dynamics and integration
-        if u_current is not None:
-            A_cont, B_cont = self.calcaulte_continous_dynamics(x_current, u_current)
-            sol = solve_ivp(
-                lambda t, x: self.continuous_dynamics(x, u_current, A_cont, B_cont),
-                [0, self.T],
-                x_current,
-                method='RK45'
-            )
-            x_current = sol.y[:, -1]  # Take the final state after time T
+        # if u_current is not None:
+        #     A_cont, B_cont = self.calcaulte_continous_dynamics(x_current, u_current)
+        #     sol = solve_ivp(
+        #         lambda t, x: self.continuous_dynamics(x, u_current, A_cont, B_cont),
+        #         [0, self.T],
+        #         x_current,
+        #         method='RK45'
+        #     )
+        #     x_current = sol.y[:, -1]  # Take the final state after time T
 
-        return u_current, x_current
+        if u_current is not None:
+            x_current = Ad @ x_current + Bd @ u_current
+
+        return x_current, u_current
 
 # Example instantiation and usage
-Q = np.eye(8)
-R = np.eye(2)
-Qf = np.eye(8)
+Q = np.diag([8000, 0.001, 2000, 0.001,8000, 0.001, 2000, 0.001])
+R = np.diag([40,40])
+Qf = np.diag([8000, 0.001, 2000, 0.001,8000, 0.001, 2000, 0.001])
+x_desired = [0,10,0,2,0,10,0,2]
 nx = 8
 nu = 2
 u_min = 0
@@ -117,8 +137,8 @@ u_max = 4.9
 ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
 
 # # Initial state
-# x_current = np.zeros(nx)      # Initial state, assuming starting from zero
-# u_current = np.zeros(nu)      # Initial control input, also starting from zero
+# x_current = [0,0]      # Initial state, assuming starting from zero
+# u_current = 0      # Initial control input, also starting from zero
 # x_desired = np.array([1, 0, 0, 0, 0, 0, 0, 0])  # Example target state
 # # Run the MPC loop
 # for _ in range(20):  # Run for 20 steps as an example
@@ -129,8 +149,13 @@ ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
 #     # Update u_current for the next iteration
 #     u_current = u_mpc
 
-x = [0,0]
-u = 0
-A_cont, B_cont = ballbot_mpc.calcaulte_continous_dynamics(x, u)
+x_current = np.zeros(8)
+u_current = np.zeros(2)
+A_cont, B_cont = ballbot_mpc.calcaulte_continous_dynamics(x_current, u_current)
 print(A_cont)
 print(B_cont)
+for _ in range(20):  # Run for 20 steps as an example
+    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
+    print("Control input:", u_current)
+    print("Updated state:", x_current)
+    
