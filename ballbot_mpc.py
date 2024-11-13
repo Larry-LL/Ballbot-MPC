@@ -17,7 +17,8 @@ class BallbotMPC:
     def calcaulte_continous_dynamics(self,x_current,u_current):  # linearize at referenced state x_current & u_current
 
         A_cont = np.zeros((self.nx,self.nx))
-        B_cont = np.zeros((self.nx,self,nu))
+        B_cont = np.zeros((self.nx,self.nu))
+
 
         return A_cont, B_cont
 
@@ -48,7 +49,7 @@ class BallbotMPC:
             constraints.append(u[i, :] <= self.umax)
         
         # Discretized dynamics
-        A_cont, B_cont = self.calcaulte_continous_dynamics(self,x_current,u_current)  # Placeholder for actual dynamics
+        A_cont, B_cont = self.calcaulte_continous_dynamics(x_current,u_current)  # Placeholder for actual dynamics
         Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)
 
         # Dynamics constraints
