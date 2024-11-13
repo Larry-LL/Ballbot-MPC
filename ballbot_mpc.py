@@ -19,7 +19,7 @@ class BallbotMPC:
         A_cont = np.zeros((self.nx,self.nx))
         B_cont = np.zeros((self.nx,self.nu))
 
-
+        #add comments for testing
         return A_cont, B_cont
 
     def continuous_dynamics(self, x, u, A_cont, B_cont):
