@@ -16,12 +16,36 @@ class BallbotMPC:
 
     def calcaulte_continous_dynamics(self,x_current,u_current):  # linearize at referenced state x_current & u_current
 
-        A_cont = np.zeros((self.nx,self.nx))
-        B_cont = np.zeros((self.nx,self.nu))
+        theta_x = x_current[0]
+        theta_x_dot = x_current[1]
+        T_YZ = u_current
 
-        #add comments for testing
+        # Compute each element of the matrix YZ_A
+        A_cont = np.array([
+            [0, 0, 1.0, 0],
+            [0, 0, 0, 1.0],
+            [(4.2e26 * np.cos(theta_x) + 7.7e25 * T_YZ * np.sin(theta_x) + 6.9e25 * np.cos(theta_x)**3 
+            + 4.9e24 * theta_x_dot**2 - 9.1e24 * theta_x_dot**2 * np.cos(theta_x)**2 
+            + 9.6e24 * T_YZ * np.cos(theta_x)**2 * np.sin(theta_x)) / (7.8e11 * np.cos(theta_x)**2 - 6.3e12)**2, 
+            0, 
+            (4.0e-3 * theta_x_dot * np.sin(2.0 * theta_x)) / (2.0e-3 * np.cos(2.0 * theta_x) - 0.03), 
+            0],
+            [(0.5 * (5.0e25 * theta_x_dot**2 * np.cos(theta_x) - 1.8e27 * np.cos(theta_x)**2 
+                    - 1.3e26 * T_YZ * np.sin(2.0 * theta_x) + 8.2e24 * theta_x_dot**2 * np.cos(theta_x)**3 
+                    + 9.4e26)) / (7.8e11 * np.cos(theta_x)**2 - 6.3e12)**2, 
+            0, 
+            (1.1e13 * theta_x_dot * np.sin(theta_x)) / (7.8e11 * np.sin(theta_x)**2 + 5.5e12), 
+            0]
+        ])
+
+        B_cont = np.array([  
+            [0],
+            [0],
+            [(0.063*np.cos(theta_x))/(4.0e-3*np.cos(theta_x)**2 - 0.032)],
+            [-0.43/(4.0e-3*np.cos(theta_x)**2 - 0.032)]
+        ])
+
         return A_cont, B_cont
-
     def continuous_dynamics(self, x, u, A_cont, B_cont):
         # Define the continuous-time dynamics for the ballbot here
         xdot = A_cont @ x + B_cont @ u
@@ -49,8 +73,8 @@ class BallbotMPC:
             constraints.append(u[i, :] <= self.umax)
         
         # Discretized dynamics
-        A_cont, B_cont = self.calcaulte_continous_dynamics(x_current,u_current)  # Placeholder for actual dynamics
-        Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)
+        A_cont, B_cont = self.calcaulte_continous_dynamics(x_current,u_current)  # 1st loop x_current & u_current will be zeros as setup in subroutine
+        Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)     #A_cont and B_cont 
 
         # Dynamics constraints
         for i in range(self.N - 1):
@@ -66,20 +90,20 @@ class BallbotMPC:
         problem = cp.Problem(cp.Minimize(cost), constraints)
         problem.solve()
 
-        u_mpc = u[0, :].value
+        u_current = u[0, :].value
 
         # Update x_current using the continuous dynamics and integration
-        if u_mpc is not None:
-            A_cont, B_cont = self.calcaulte_continous_dynamics(x_current, u_mpc)
+        if u_current is not None:
+            A_cont, B_cont = self.calcaulte_continous_dynamics(x_current, u_current)
             sol = solve_ivp(
-                lambda t, x: self.continuous_dynamics(x, u_mpc, A_cont, B_cont),
+                lambda t, x: self.continuous_dynamics(x, u_current, A_cont, B_cont),
                 [0, self.T],
                 x_current,
                 method='RK45'
             )
             x_current = sol.y[:, -1]  # Take the final state after time T
 
-        return u_mpc, x_current
+        return u_current, x_current
 
 # Example instantiation and usage
 Q = np.eye(8)
@@ -104,3 +128,9 @@ for _ in range(20):  # Run for 20 steps as an example
 
     # Update u_current for the next iteration
     u_current = u_mpc
+
+x = [0,0]
+u = 0
+A_cont, B_cont = BallbotMPC.calcaulte_continous_dynamics(x, u)
+print(A_cont)
+print(B_cont)
