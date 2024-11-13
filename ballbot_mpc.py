@@ -116,21 +116,21 @@ u_max = 4.9
 
 ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
 
-# Initial state
-x_current = np.zeros(nx)      # Initial state, assuming starting from zero
-u_current = np.zeros(nu)      # Initial control input, also starting from zero
-x_desired = np.array([1, 0, 0, 0, 0, 0, 0, 0])  # Example target state
-# Run the MPC loop
-for _ in range(20):  # Run for 20 steps as an example
-    u_mpc, x_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
-    print("Control input:", u_mpc)
-    print("Updated state:", x_current)
+# # Initial state
+# x_current = np.zeros(nx)      # Initial state, assuming starting from zero
+# u_current = np.zeros(nu)      # Initial control input, also starting from zero
+# x_desired = np.array([1, 0, 0, 0, 0, 0, 0, 0])  # Example target state
+# # Run the MPC loop
+# for _ in range(20):  # Run for 20 steps as an example
+#     u_mpc, x_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
+#     print("Control input:", u_mpc)
+#     print("Updated state:", x_current)
 
-    # Update u_current for the next iteration
-    u_current = u_mpc
+#     # Update u_current for the next iteration
+#     u_current = u_mpc
 
 x = [0,0]
 u = 0
-A_cont, B_cont = BallbotMPC.calcaulte_continous_dynamics(x, u)
+A_cont, B_cont = ballbot_mpc.calcaulte_continous_dynamics(x, u)
 print(A_cont)
 print(B_cont)

@@ -88,14 +88,15 @@ symbolid_values = [theta_x_dot, phi_x_dot];
 YZ_A = vpa(subs(YZ_A, symbolic_terms, symbolid_values));
 YZ_B = vpa(subs(YZ_B, symbolic_terms, symbolid_values));
 
-YZ_terms = [g, L, m_k, m_a, I_k, I_a_xy, r_k, theta_x(t), theta_x_dot, T_YZ];
-YZ_values = [9.81, 0.207, 2.558, 3.0, 0.0171, 0.173, 0.1016, 0.0, 0.0, 0.0];
-YZ_A = double(subs(YZ_A, YZ_terms, YZ_values))           % Get the YZ_A matrix's result
-YZ_B = double(subs(YZ_B, YZ_terms, YZ_values)) 
-% YZ_terms = [g, L, m_k, m_a, I_k, I_a_xy, r_k ];
-% YZ_values = [9.81, 0.207, 2.558, 3.0, 0.0171, 0.173, 0.1016];
-% YZ_A = vpa(simplify(subs(YZ_A, YZ_terms, YZ_values)),2)          % Get the YZ_A matrix's result
-% YZ_B = vpa(simplify(subs(YZ_B, YZ_terms, YZ_values)),2)           % Get the YZ_B matrix's result
+% YZ_terms = [g, L, m_k, m_a, I_k, I_a_xy, r_k, theta_x(t), theta_x_dot, T_YZ];
+% YZ_values = [9.81, 0.207, 2.558, 3.0, 0.0171, 0.173, 0.1016, 0.0, 0.0, 0.0];
+% YZ_A = double(subs(YZ_A, YZ_terms, YZ_values))           % Get the YZ_A matrix's result
+% YZ_B = double(subs(YZ_B, YZ_terms, YZ_values)) 
+YZ_terms = [g, L, m_k, m_a, I_k, I_a_xy, r_k ];
+YZ_values = [9.81, 0.207, 2.558, 3.0, 0.0171, 0.173, 0.1016];
+
+YZ_A = vpa(simplify(subs(YZ_A, YZ_terms, YZ_values)),2)          % Get the YZ_A matrix's result
+YZ_B = vpa(simplify(subs(YZ_B, YZ_terms, YZ_values)),2)           % Get the YZ_B matrix's result
 
 YZ_Q = diag([8000; 0.001; 2000; 0.001]);
 YZ_R = 40;
