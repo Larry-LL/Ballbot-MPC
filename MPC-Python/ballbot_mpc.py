@@ -192,8 +192,8 @@ print("Total iteration time equals",iteration)
 
 ##visualization
 plt.figure(figsize=(8, 8))
-plt.plot(x_positions, y_positions, 'bo-', label='Trajectory')  # Blue dots for each iteration
-plt.scatter(x_desired[1], x_desired[5], color='red', marker='o', label='Goal Position (1,1)')  # Red dot for goal position
+plt.plot(x_positions, y_positions, 'bo-', label='Trajectory')  
+plt.scatter(x_desired[1], x_desired[5], color='red', marker='o', label='Goal Position (1,1)')  
 
 # Add labels and title
 plt.xlabel("X Position")
@@ -205,8 +205,8 @@ plt.axis('equal')
 plt.show()
 
 plt.figure(figsize=(8, 8))
-plt.plot(thetax_positions, thetay_positions, 'go-', label='Tilt Trajectory')  # Green dots for each iteration
-plt.scatter(0, 0, color='red', marker='o', label='Goal Orientation (0,0)')  # Red dot for goal orientation
+plt.plot(thetax_positions, thetay_positions, 'go-', label='Tilt Trajectory')  
+plt.scatter(0, 0, color='red', marker='o', label='Goal Orientation (0,0)')  
 
 # Add labels and title for the second plot
 plt.xlabel("Theta X Position")
