@@ -184,15 +184,15 @@ print("x_current:", x_current.flatten())
 print("Total iteration time equals",iteration)
 
 ##visualization
-plt.figure(figsize=(10, 5))
-plt.plot(x_positions, label='X Position')
-plt.plot(y_positions, label='Y Position')
+plt.figure(figsize=(8, 8))
+plt.plot(x_positions, y_positions, 'bo-', label='Trajectory')  # Blue dots for each iteration
+plt.scatter(x_desired[1], x_desired[5], color='red', marker='o', label='Goal Position (1,1)')  # Red dot for goal position
 
-plt.scatter(iteration - 1, x_desired[1], color='red', marker='o', label='Goal X Position (1,1)')
-plt.scatter(iteration - 1, x_desired[5], color='red', marker='o', label='Goal Y Position (1,1)')
-
-plt.xlabel("Iteration")
-plt.ylabel("Position")
-plt.title("X and Y Positions over Iterations in MPC")
+# Add labels and title
+plt.xlabel("X Position")
+plt.ylabel("Y Position")
+plt.title("Trajectory of X and Y Positions in MPC")
 plt.legend()
+plt.grid(True)
+plt.axis('equal')
 plt.show()
