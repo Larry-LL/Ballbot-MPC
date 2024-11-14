@@ -99,7 +99,7 @@ YZ_B = vpa(simplify(subs(YZ_B, YZ_terms, YZ_values)),4)           % Get the YZ_B
 
 YZ_Q = diag([8000; 0.001; 2000; 0.001]);
 YZ_R = 40;
-YZ_K = lqr(YZ_A, YZ_B, YZ_Q, YZ_R)
+% YZ_K = lqr(YZ_A, YZ_B, YZ_Q, YZ_R)
 
 %% Linear Simulation Test
 
@@ -135,7 +135,8 @@ YZ_K = lqr(YZ_A, YZ_B, YZ_Q, YZ_R)
 % Convert phi into world coordinate for calculations
 % YZ_real_phi = q_YZ(1) + q_YZ(2);       % Convert our phi from Body_coord to World_coord.
 % YZ_real_dphi = diff(YZ_real_phi, t);      % Get angular velocity in World_coord.
-function dxdt = self_balance(t, x, A, B, K)
-    u = -K * x;
-    dxdt = A * x + B * u; 
-end
+% function dxdt = self_balance(t, x, A, B, K)
+%     u = -K * x;
+%     dxdt = A * x + B * u; 
+% end
+YZ_A=vpa(simplify(YZ_A),3)
