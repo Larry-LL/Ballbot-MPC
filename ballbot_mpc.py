@@ -174,12 +174,17 @@ x_current = np.zeros((8,1))
 u_current = np.zeros((nu))
 x_positions = []
 y_positions = []
+thetay_positions = []
+thetax_positions = []
+
 iteration = 0
 while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
     x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
     iteration +=1
     x_positions.append(x_current[1, 0])  # x position (second state)
-    y_positions.append(x_current[5, 0])    
+    y_positions.append(x_current[5, 0])  
+    thetay_positions.append(x_current[0,0])
+    thetax_positions.append(x_current[4,0]) 
 print("x_current:", x_current.flatten())
 print("Total iteration time equals",iteration)
 
@@ -192,6 +197,19 @@ plt.scatter(x_desired[1], x_desired[5], color='red', marker='o', label='Goal Pos
 plt.xlabel("X Position")
 plt.ylabel("Y Position")
 plt.title("Trajectory of X and Y Positions in MPC")
+plt.legend()
+plt.grid(True)
+plt.axis('equal')
+plt.show()
+
+plt.figure(figsize=(8, 8))
+plt.plot(thetax_positions, thetay_positions, 'go-', label='Tilt Trajectory')  # Green dots for each iteration
+plt.scatter(0, 0, color='red', marker='o', label='Goal Orientation (0,0)')  # Red dot for goal orientation
+
+# Add labels and title for the second plot
+plt.xlabel("Theta X Position")
+plt.ylabel("Theta Y Position")
+plt.title("Trajectory of Theta X and Theta Y Positions in MPC")
 plt.legend()
 plt.grid(True)
 plt.axis('equal')
