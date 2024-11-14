@@ -185,6 +185,8 @@ while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
     y_positions.append(x_current[5, 0])  
     thetay_positions.append(x_current[0,0])
     thetax_positions.append(x_current[4,0]) 
+    print(thetax_positions)
+    print(iteration)
 print("x_current:", x_current.flatten())
 print("Total iteration time equals",iteration)
 
