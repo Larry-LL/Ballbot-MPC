@@ -105,7 +105,7 @@ float psi_3 ;
 double wheel_speed_1 ; 
 double wheel_speed_2 ; 
 double wheel_speed_3 ; 
-float offset_percentage = 0.15;
+float offset_percentage = 0.1;
 float new_offset_percentage = 0.18;
 unsigned long previous_time = 0; 
 unsigned long current_time; 
@@ -181,9 +181,9 @@ const long interval = 5;
 
 
 
-PID ballbotPID1(&Current_current1, &pidCorrection1, &Desired_current_1, kp, ki, kd, DIRECT);  //input output setpoint 
-PID ballbotPID2(&Current_current2, &pidCorrection2, &Desired_current_2, kp, ki, kd, DIRECT);  //input output setpoint 
-PID ballbotPID3(&Current_current3, &pidCorrection3, &Desired_current_3, kp, ki, kd, DIRECT);  //input output setpoint 
+// PID ballbotPID1(&Current_current1, &pidCorrection1, &Desired_current_1, kp, ki, kd, DIRECT);  //input output setpoint 
+// PID ballbotPID2(&Current_current2, &pidCorrection2, &Desired_current_2, kp, ki, kd, DIRECT);  //input output setpoint 
+// PID ballbotPID3(&Current_current3, &pidCorrection3, &Desired_current_3, kp, ki, kd, DIRECT);  //input output setpoint 
 
 
 boolean test_direction = true;
@@ -194,8 +194,8 @@ boolean test_direction = true;
 // };
 
 Matrix<2, 8> K_matrix = {
-   -28.5657,   -0.0050,   -8.6105,   -0.0447, 0, 0, 0, 0,
-  0, 0, 0, 0,  -28.5657,   -0.0050,   -8.6105,   -0.0447
+  -36.1415,   -0.0500,  -12.0185,   -0.1662, 0, 0, 0, 0,
+  0, 0, 0, 0, -36.1415,   -0.0500,  -12.0185,   -0.1662
 };
 
 
@@ -236,12 +236,12 @@ void setup() {
   Serial.begin(115200);  // Initialize the serial port
 
   //start the pid setup 
-  ballbotPID1.SetMode(AUTOMATIC);
-  ballbotPID1.SetOutputLimits(-8, 8);  // Limits for PID
-  ballbotPID2.SetMode(AUTOMATIC);
-  ballbotPID2.SetOutputLimits(-8, 8);  // Limits for PID
-  ballbotPID3.SetMode(AUTOMATIC);
-  ballbotPID3.SetOutputLimits(-8, 8);  // Limits for PID
+  // ballbotPID1.SetMode(AUTOMATIC);
+  // ballbotPID1.SetOutputLimits(-8, 8);  // Limits for PID
+  // ballbotPID2.SetMode(AUTOMATIC);
+  // ballbotPID2.SetOutputLimits(-8, 8);  // Limits for PID
+  // ballbotPID3.SetMode(AUTOMATIC);
+  // ballbotPID3.SetOutputLimits(-8, 8);  // Limits for PID
   
   //Start the encoder setup
   EncoderInit_1();
@@ -389,29 +389,29 @@ Phi_x_tot = Phi_x_tot + Phi_dot_x *time_interval; //rad
 Phi_y_tot = Phi_y_tot + Phi_dot_y *time_interval; 
 
 State_Matrix(0) = theta_xd;  
-State_Matrix(1) = 0;//Phi_x_tot;  
+State_Matrix(1) = Phi_x_tot;  
 State_Matrix(2) = theta_dot_x;  
-State_Matrix(3) = 0;//Phi_dot_x ; 
+State_Matrix(3) = Phi_dot_x ; 
 
 State_Matrix(4) = theta_yd;  
-State_Matrix(5) = 0;// Phi_y_tot ; 
+State_Matrix(5) = Phi_y_tot ; 
 State_Matrix(6) = theta_dot_y ; 
-State_Matrix(7) = 0;//Phi_dot_y ; 
+State_Matrix(7) = Phi_dot_y ; 
 
-// if (abs(theta_xd) > 0.05){
-//   State_Matrix(0) = 0 ;
-// }
-// if (abs(theta_yd) > 0.05){
-//   State_Matrix(4) = 0 ;
-// }
-// if(abs(theta_dot_x) > 0.01){
+if (abs(theta_xd) < 0.017){
+  State_Matrix(0) = 0 ;
+}
+if (abs(theta_yd) < 0.017){
+  State_Matrix(4) = 0 ;
+}
+if(abs(theta_dot_x) < 0.017){
 
-//   State_Matrix(2) = 0; 
-// }
+  State_Matrix(2) = 0; 
+}
 
-// if(abs(theta_dot_y) > 0.01){
-//   State_Matrix(6) = 0;
-// }
+if(abs(theta_dot_y) < 0.017){
+  State_Matrix(6) = 0;
+}
 
 Control_Input_Matrix = -K_matrix * State_Matrix ;     // return the input control Torque 
 
@@ -447,27 +447,61 @@ Current_current1 = (total_pwm3/255*12 - k_e * wheel_speed_3)/1.7;
 
 
 // //////////////////////////
-unsigned long currentMillis = millis();
+// unsigned long currentMillis = millis();
 
-if (currentMillis - previousMillis >= interval) {
-  previousMillis = currentMillis;  // update the time
+// if (currentMillis - previousMillis >= interval) {
+//   previousMillis = currentMillis;  // update the time
 
-  // Run your subroutines
-  CorrectionPID1(Current_current1, Desired_current_1);
-  CorrectionPID2(Current_current2, Desired_current_2);
-  CorrectionPID3(Current_current3, Desired_current_3);
-}
+//   CorrectionPID1(Current_current1, Desired_current_1);
+//   CorrectionPID2(Current_current2, Desired_current_2);
+//   CorrectionPID3(Current_current3, Desired_current_3);
+// }
 // ///////////////////
+
+// if (torque_1 > 0) {
+//   total_pwm1 = (1.65 * Desired_current_1 - k_e * wheel_speed_1) / 12 * 255;
+// } else {
+//   total_pwm1 = (1.65 * Desired_current_1 + k_e * wheel_speed_1) / 12 * 255;
+// }
+
+// if (torque_2 > 0) {
+//   total_pwm2 = (1.65 * Desired_current_2 - k_e * wheel_speed_2) / 12 * 255;}
+//   else {
+//     total_pwm2 = (1.65 * Desired_current_2 + k_e * wheel_speed_2) / 12 * 255;
+//   }
+
+// if (torque_3 > 0) {
+//   total_pwm3 = (1.65 * Desired_current_3 - k_e * wheel_speed_3) / 12 * 255;
+// } else {
+//   total_pwm3 = (1.65 * Desired_current_3 + k_e * wheel_speed_3) / 12 * 255;
+// }
+
+total_pwm1 = (1.65 * Desired_current_1 + 0.5 * wheel_speed_1) / 12 * 255;
+
+total_pwm2 = (1.65 * Desired_current_2 + 0.5 * wheel_speed_2) / 12 * 255;
+
+total_pwm3 = (1.65 * Desired_current_3 + 0.5 * wheel_speed_3) / 12 * 255;
+
+
+
 
 ratio_1 = total_pwm1/255;
 ratio_2 = total_pwm2/255;
 ratio_3 = total_pwm3/255;
-Serial.print(ratio_1);
-Serial.print(" ");
-Serial.print(ratio_2);
-Serial.print(" ");
-Serial.println(ratio_3);
 
+// Serial.print(ratio_1);
+// Serial.print(" ");
+// Serial.print(ratio_2);
+// Serial.print(" ");
+// Serial.println(ratio_3);
+
+total_pwm1 = 255; 
+total_pwm2 = 255; 
+total_pwm3 = 255; 
+
+writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
+writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
+writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 
 // if (Desired_Torque_1 < 0) {
 //   ratio_1 = ((Desired_Torque_1 - 0.635) * resistance_motor / kt + k_e * wheel_speed_1) / 12;
@@ -605,11 +639,12 @@ Serial.println(ratio_3);
 // Serial.print(" ");
 // Serial.print(psi_3);
 // Serial.print(" ");
-// Serial.print(wheel_speed_1);
-// Serial.print(" ");
-// Serial.print(wheel_speed_2);
-// Serial.print(" ");
-// Serial.println(wheel_speed_3);
+
+Serial.print(duration_1);
+Serial.print(" ");
+Serial.print(duration_2);
+Serial.print(" ");
+Serial.println(duration_3);
 
 
 Serial.println("State Matrix:");
@@ -670,48 +705,49 @@ delay(100);
 /////////////////////////////////////////////////////////////////////////
 
 
-void CorrectionPID1(double Current_current1, double Desired_current_1) {
+// void CorrectionPID1(double Current_current1, double Desired_current_1) {
 
-  ballbotPID1.Compute();
-  total_pwm1 = pidCorrection1*1.7/12*255;
-  if (total_pwm1 >0){
-    total_pwm1 += offset_percentage*255;
-  }
+//   ballbotPID1.Compute();
+//   // total_pwm1 = pidCorrection1*1.7/12*255;
+//   total_pwm1 = (1.7*pidCorrection1+k_e*wheel_speed_1)/12*255;
+//   if (total_pwm1 >0){
+//     total_pwm1 += offset_percentage*255;
+//   }
 
-  else{
-    total_pwm1 -= offset_percentage*255;
-  }
-  writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
-}
+//   else{
+//     total_pwm1 -= offset_percentage*255;
+//   }
+//   writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
+// }
 
-void CorrectionPID2(double Current_current2, double Desired_current_2) {
+// void CorrectionPID2(double Current_current2, double Desired_current_2) {
 
-  ballbotPID2.Compute();
-  total_pwm2 = pidCorrection2 * 1.7 / 12 * 255;
-  if (total_pwm2 > 0) {
-    total_pwm2 += offset_percentage * 255;
-  }
+//   ballbotPID2.Compute();
+//   total_pwm2 = (1.7*pidCorrection2+k_e*wheel_speed_2)/12*255;
+//   if (total_pwm2 > 0) {
+//     total_pwm2 += offset_percentage * 255;
+//   }
 
-  else {
-    total_pwm2 -= offset_percentage * 255;
-  }
-  writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
-}
+//   else {
+//     total_pwm2 -= offset_percentage * 255;
+//   }
+//   writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
+// }
 
-void CorrectionPID3(double Current_current3, double Desired_current3) {
+// void CorrectionPID3(double Current_current3, double Desired_current3) {
 
-  ballbotPID3.Compute();
-  total_pwm3 = pidCorrection3*1.7/12*255;
-  if (total_pwm3 > 0) {
-    total_pwm3 += offset_percentage * 255;
-  }
+//   ballbotPID3.Compute();
+//   // total_pwm3 = pidCorrection3*1.7/12*255;
+//   total_pwm3 = (1.7*pidCorrection3+k_e*wheel_speed_3)/12*255;
+//   if (total_pwm3 > 0) {
+//     total_pwm3 += offset_percentage * 255;
+//   }
 
-  else {
-    total_pwm3 -= offset_percentage * 255;
-  }
-
-  writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
-}
+//   else {
+//     total_pwm3 -= offset_percentage * 255;
+//   }
+//   writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
+// }
 
 
 // void CorrectionPID1(double wheel_speed, double desired_velocity) {
