@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cp
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-
+import casadi as ca
 
 
 class BallbotMPC:
@@ -136,21 +136,43 @@ class BallbotMPC:
         for i in range(self.N - 1):
             constraints.append(x[i + 1, :] == Ad @ x[i, :] + Bd @ u[i, :])
 
+        # add obstacle constraints
+        obstacle_center = np.array([0.2,0.5])
+        obstacle_radius = 0.1
+        obstacle_penalty_weight = 1e3 
+        x_min = 0.1
+        x_max = 0.2
+        y_min = 0.3
+        y_max = 0.5
+        
+        # for i in range(self.N):
+        #     # Create constraints that ensure avoidance of the box boundaries
+        #     constraints.append(x[i, 1] <= x_min)  # Left of the box
+        #     # constraints.append(x[i, 1] >= x_max)  # Right of the box
+        #     constraints.append(x[i, 5] <= y_min)  # Below the box
+        #     # constraints.append(x[i, 5] >= y_max)  # Above the box
+
         # Cost function
         cost = 0
+        avoidance_penalty = 100
         for i in range(self.N - 1):
             cost += cp.quad_form((x_desired-x[i, :]), self.Q) + cp.quad_form(u[i, :], self.R)
+            x_penalty = cp.maximum(0, x[i, 1] - x_min) + cp.maximum(0, x_max - x[i, 1])
+            y_penalty = cp.maximum(0, x[i, 5] - y_min) + cp.maximum(0, y_max - x[i, 5])
+            penalty = cp.minimum(x_penalty, y_penalty)
+            cost += avoidance_penalty * penalty
+
         cost += cp.quad_form((x_desired - x[self.N - 1, :]), self.Qf)  # Terminal cost
 
         # Solve the optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         problem.solve()
   
-
         u_current = u[0, :].value
-        u_current = u_current.reshape(-1, 1)
-
+        print(u_current)
+        
         if u_current is not None:
+            u_current = u_current.reshape(-1, 1)
             x_current = Ad @ x_current + Bd @ u_current
         else:
             u_current = np.zeros((self.nu, 1))
@@ -178,7 +200,8 @@ thetay_positions = []
 thetax_positions = []
 
 iteration = 0
-while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
+# while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
+for _ in range(70):
     x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
     iteration +=1
     x_positions.append(x_current[1, 0])  # x position (second state)
