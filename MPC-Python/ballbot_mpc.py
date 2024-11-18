@@ -2,7 +2,8 @@ import numpy as np
 import cvxpy as cp
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
-import casadi as ca
+from scipy.optimize import minimize
+
 
 
 class BallbotMPC:
@@ -16,6 +17,73 @@ class BallbotMPC:
         self.umax = u_max  # Maximum input constraint
         self.N = 30  # Prediction horizon
         self.T = 0.1  # Time step
+
+
+    def trajectory_optimization_with_scipy(self,start, goal, obstacles, num_waypoints=70):
+        print(start)
+        x_start = start[0]
+        y_start = start[1]
+        x_goal = goal[0]
+        y_goal = goal[1]
+
+        x_initial_guess = np.linspace(x_start,x_goal,num_waypoints)
+        y_initial_guess = np.linspace(y_start,y_goal,num_waypoints)
+        decision_var = np.hstack((x_initial_guess,y_initial_guess))
+        
+        def traj_cost(trajectory): 
+            x = trajectory[:num_waypoints]
+            y = trajectory[num_waypoints:] 
+            return np.sum((np.diff(x)**2 + np.diff(y)**2))
+        
+        def traj_constraints():
+            cons = []
+            cons.append({'type': 'eq', 'fun': lambda traj: traj[0] - x_start})       # x_start
+            cons.append({'type': 'eq', 'fun': lambda traj: traj[num_waypoints - 1] - x_goal})   # x_goal
+            cons.append({'type': 'eq', 'fun': lambda traj: traj[num_waypoints] - y_start})      # y_start
+            cons.append({'type': 'eq', 'fun': lambda traj: traj[2 * num_waypoints - 1] - y_goal})
+            for obs in obstacles:
+                center = np.array(obs["center"])
+                radius = obs["radius"]
+                for i in range(num_waypoints):
+                    cons.append({
+                    'type': 'ineq',  # Inequality: distance >= radius
+                    'fun': lambda traj, i=i, center=center, radius=radius: 
+                           np.linalg.norm([traj[i] - center[0], traj[num_waypoints + i] - center[1]]) - radius
+                })
+            return cons
+        result = minimize(
+        traj_cost,
+        decision_var,
+        constraints=traj_constraints(),
+        method='SLSQP',
+        options={'disp': True, 'maxiter': 500}
+        # options={'disp': True}
+    )
+        if not result.success:
+            raise ValueError(f"Optimization failed: {result.message}")
+        # Reshape the optimized trajectory into Nx2
+        optimized_trajectory = np.vstack((result.x[:num_waypoints], result.x[num_waypoints:])).T
+        plt.figure(figsize=(8, 8))
+        plt.plot(optimized_trajectory[:, 0], optimized_trajectory[:, 1], 'b-o', label="Optimized Trajectory")
+        plt.scatter(x_start, y_start, color='green', label="Start Point")
+        plt.scatter(x_goal, y_goal, color='red', label="Goal Point")
+        
+        for obs in obstacles:
+            center = obs["center"]
+            radius = obs["radius"]
+            circle = plt.Circle(center, radius, color='gray', alpha=0.5, label="Obstacle")
+            plt.gca().add_artist(circle)
+
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.title("Trajectory Optimization with Obstacles")
+        plt.grid(True)
+        plt.legend()
+        plt.axis("equal")
+        plt.show()
+
+
+        return optimized_trajectory
 
     def calcaulte_continous_dynamics(self,x_current,u_current):  # linearize at referenced state x_current & u_current
         u_current = u_current.reshape(-1, 1)
@@ -197,7 +265,6 @@ x_positions = []
 y_positions = []
 thetay_positions = []
 thetax_positions = []
-
 iteration = 0
 # while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
 for _ in range(70):
@@ -211,6 +278,21 @@ for _ in range(70):
     print(iteration)
 print("x_current:", x_current.flatten())
 print("Total iteration time equals",iteration)
+
+
+# start = np.array([0,0])
+# goal = np.array([10,10])
+# obstacles = [
+#     {"center": (4, 4), "radius": 1},
+#     {"center": (7, 8), "radius": 1.5},
+# ]
+
+# trajcotory = ballbot_mpc.trajectory_optimization_with_scipy(start, goal, obstacles)
+# print(trajcotory)
+
+
+
+
 
 ##visualization
 plt.figure(figsize=(8, 8))
