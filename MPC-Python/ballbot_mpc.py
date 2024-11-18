@@ -157,7 +157,6 @@ class BallbotMPC:
 
         return x_current, u_current
 
-# Example instantiation and usage
 Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
 R = np.diag([5,5])
 Qf = np.diag([8, 50, 8, 10,8, 50, 8, 10])
@@ -216,3 +215,5 @@ plt.legend()
 plt.grid(True)
 plt.axis('equal')
 plt.show()
+print(max(thetax_positions))
+print(max(thetay_positions))
