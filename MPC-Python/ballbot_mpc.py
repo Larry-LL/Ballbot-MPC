@@ -20,7 +20,6 @@ class BallbotMPC:
 
 
     def trajectory_optimization_with_scipy(self,start, goal, obstacles, num_waypoints=70):
-        print(start)
         x_start = start[0]
         y_start = start[1]
         x_goal = goal[0]
@@ -179,7 +178,7 @@ class BallbotMPC:
         Bd = B_cont * T
         return Ad, Bd
 
-    def compute_mpc(self, x_current, u_current, x_desired): #our main mpc computational function 
+    def compute_mpc(self, x_current, u_current, x_goal,x_ref): #our main mpc computational function 
         # Define decision variables
         x = cp.Variable((self.N, self.nx))   
         u = cp.Variable((self.N - 1, self.nu)) 
@@ -205,39 +204,21 @@ class BallbotMPC:
             constraints.append(x[i + 1, :] == Ad @ x[i, :] + Bd @ u[i, :])
 
         # add obstacle constraints
-        obstacle_center = np.array([0.2,0.5])
-        obstacle_radius = 0.1
-        obstacle_penalty_weight = 1e3 
-        x_min = 0.1
-        x_max = 0.2
-        y_min = 0.3
-        y_max = 0.5
+
         
-        # for i in range(self.N):
-        #     # Create constraints that ensure avoidance of the box boundaries
-        #     constraints.append(x[i, 1] <= x_min)  # Left of the box
-        #     # constraints.append(x[i, 1] >= x_max)  # Right of the box
-        #     constraints.append(x[i, 5] <= y_min)  # Below the box
-        #     # constraints.append(x[i, 5] >= y_max)  # Above the box
 
         # Cost function
         cost = 0
-        avoidance_penalty = 100
         for i in range(self.N - 1):
-            cost += cp.quad_form((x_desired-x[i, :]), self.Q) + cp.quad_form(u[i, :], self.R)
-            x_penalty = cp.maximum(0, x[i, 1] - x_min) + cp.maximum(0, x_max - x[i, 1])
-            y_penalty = cp.maximum(0, x[i, 5] - y_min) + cp.maximum(0, y_max - x[i, 5])
-            penalty = cp.minimum(x_penalty, y_penalty)
-            cost += avoidance_penalty * penalty
+            cost += cp.quad_form((x_ref - x[i, :]), self.Q) + cp.quad_form(u[i, :], self.R)
 
-        cost += cp.quad_form((x_desired - x[self.N - 1, :]), self.Qf)  # Terminal cost
+        cost += cp.quad_form((x_goal - x[self.N - 1, :]), self.Qf)  # Terminal cost
 
         # Solve the optimization problem
         problem = cp.Problem(cp.Minimize(cost), constraints)
         problem.solve()
   
         u_current = u[0, :].value
-        print(u_current)
         
         if u_current is not None:
             u_current = u_current.reshape(-1, 1)
@@ -250,7 +231,7 @@ class BallbotMPC:
 Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
 R = np.diag([5,5])
 Qf = np.diag([8, 50, 8, 10,8, 50, 8, 10])
-x_desired = np.array([0, 1, 0, 0, 0, 1, 0, 0])
+x_goal = np.array([0, 5, 0, 0, 0, 6, 0, 0])
 nx = 8
 nu = 2
 u_min = -4.9
@@ -266,38 +247,56 @@ y_positions = []
 thetay_positions = []
 thetax_positions = []
 iteration = 0
-# while np.linalg.norm(x_current.flatten() - x_desired) > tolerance:
-for _ in range(70):
-    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_desired)
+ahead_ref_idx = 2
+
+start = np.array([0,0])
+goal = np.array([x_goal[1],x_goal[5]])
+obstacles = [
+    {"center": (4, 4), "radius": 1},
+    {"center": (7, 8), "radius": 1.5},
+]
+
+trajectory = ballbot_mpc.trajectory_optimization_with_scipy(start, goal, obstacles)
+# print(trajcotory)
+
+
+while np.linalg.norm(x_current.flatten() - x_goal) > tolerance:
+    current_position = np.array([x_current[1], x_current[5]]).flatten()
+
+    distances = np.linalg.norm(trajectory - current_position, axis=1)
+
+    # Find the index of the closest waypoint
+    closest_idx = np.argmin(distances)
+    
+    if closest_idx + ahead_ref_idx < len(trajectory):
+        x_ref = np.array([0, trajectory[closest_idx+ahead_ref_idx, 0], 0, 0, 0, trajectory[closest_idx+ahead_ref_idx, 1], 0, 0])
+    else:
+        x_ref = x_goal
+
+    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal , x_ref)
     iteration +=1
     x_positions.append(x_current[1, 0])  # x position (second state)
     y_positions.append(x_current[5, 0])  
     thetay_positions.append(x_current[0,0])
     thetax_positions.append(x_current[4,0]) 
-    print(thetax_positions)
     print(iteration)
-print("x_current:", x_current.flatten())
+
 print("Total iteration time equals",iteration)
 
 
-# start = np.array([0,0])
-# goal = np.array([10,10])
-# obstacles = [
-#     {"center": (4, 4), "radius": 1},
-#     {"center": (7, 8), "radius": 1.5},
-# ]
-
-# trajcotory = ballbot_mpc.trajectory_optimization_with_scipy(start, goal, obstacles)
-# print(trajcotory)
 
 
-
-
-
-##visualization
+#visualization
 plt.figure(figsize=(8, 8))
 plt.plot(x_positions, y_positions, 'bo-', label='Trajectory')  
-plt.scatter(x_desired[1], x_desired[5], color='red', marker='o', label='Goal Position (1,1)')  
+plt.scatter(x_goal[1], x_goal[5], color='red', marker='o', label='Goal Position (1,1)')  
+
+# Add obstacles
+for obstacle in obstacles:
+    center = obstacle["center"]
+    radius = obstacle["radius"]
+    circle = plt.Circle(center, radius, color='gray', alpha=0.5, label='Obstacle')
+    plt.gca().add_artist(circle)
 
 # Add labels and title
 plt.xlabel("X Position")
@@ -308,9 +307,17 @@ plt.grid(True)
 plt.axis('equal')
 plt.show()
 
+# Visualization of Theta X and Theta Y positions
 plt.figure(figsize=(8, 8))
 plt.plot(thetax_positions, thetay_positions, 'go-', label='Tilt Trajectory')  
 plt.scatter(0, 0, color='red', marker='o', label='Goal Orientation (0,0)')  
+
+# Add obstacles for the second plot (optional, if relevant)
+# for obstacle in obstacles:
+#     center = obstacle["center"]
+#     radius = obstacle["radius"]
+#     circle = plt.Circle(center, radius, color='gray', alpha=0.5, label='Obstacle')
+#     plt.gca().add_artist(circle)
 
 # Add labels and title for the second plot
 plt.xlabel("Theta X Position")
@@ -320,5 +327,7 @@ plt.legend()
 plt.grid(True)
 plt.axis('equal')
 plt.show()
-print(max(thetax_positions))
-print(max(thetay_positions))
+
+# Print max values of tilt positions
+print("Max Theta X:", max(thetax_positions))
+print("Max Theta Y:", max(thetay_positions))
