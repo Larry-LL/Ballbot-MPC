@@ -18,18 +18,18 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 #define PWM_freq 5000
 #define PWM_resolution 12
 int Motor_cpr = 64 ; 
-int Gear_ratio = 150 ;
+int Gear_ratio = 150;
 
 //Motor #1 
 float pwm_1;    //motor 3 
 int duration_1 = 0;
 boolean Direction_1;
 byte encoder0PinALast_1;
-const byte encoder0pinA_1 = 14; // Pin A
-const byte encoder0pinB_1 = 35; // Pin B
+const byte encoder0pinA_1 = 35; // Pin A
+const byte encoder0pinB_1 = 14; // Pin B
 float omega_1 ; 
-#define Motor1_dir_1 10
-#define Motor1_dir_2 9
+#define Motor1_dir_1 9
+#define Motor1_dir_2 10
 #define PWM_pin_1 27
 #define PWM_channel_1 0
 //new_encoder_setup 
@@ -43,11 +43,11 @@ float pwm_2 ;
 int duration_2 = 0;
 boolean Direction_2;
 byte encoder0PinALast_2;
-const byte encoder0pinA_2 = 33; // Pin A
-const byte encoder0pinB_2 = 32; // Pin B
+const byte encoder0pinA_2 = 32;//39; // Pin A
+const byte encoder0pinB_2 = 5;//36; // Pin B
 float omega_2 ; 
-#define Motor2_dir_1 25
-#define Motor2_dir_2 26
+#define Motor2_dir_1 26
+#define Motor2_dir_2 25
 #define PWM_pin_2 19
 #define PWM_channel_2 1
 //new_encoder_setup 
@@ -61,20 +61,18 @@ float pwm_3 ;
 int duration_3 = 0;
 boolean Direction_3;
 byte encoder0PinALast_3;
-const byte encoder0pinA_3 = 5; // Pin A
-const byte encoder0pinB_3 = 23; // Pin B     motor 2
+const byte encoder0pinA_3 = 39;//32; // Pin A
+const byte encoder0pinB_3 = 36;//5; // Pin B     motor 2
 float omega_3 ; 
 #define Motor3_dir_1 4
 #define Motor3_dir_2 18 
-#define PWM_pin_3 19
+#define PWM_pin_3 23
 #define PWM_channel_3 2
 //new_encoder_setup 
 volatile uint8_t lastStateAB_3 = 0;
 volatile uint8_t currentStateAB_3 = 0;
 volatile int pulseCount_3 = 0;
 volatile bool direction3 = true;
-
-
 
 
 
@@ -188,7 +186,7 @@ float ratio_1;
 float ratio_2;
 float ratio_3;
 int j = 0;
-const int oneSecond = 1000;
+const int oneSecond = 100;
 const unsigned long debounceDelay = 50;
 volatile unsigned long lastTime_1 = 0;
 volatile unsigned long currentTime_1 = 0;
@@ -214,8 +212,8 @@ boolean test_direction = true;
 
 
 Matrix<2, 8> K_matrix = {
-  -36.1415,   -0.0500,  -12.0185,   -0.1662, 0, 0, 0, 0,
-  0, 0, 0, 0, -36.1415,   -0.0500,  -12.0185,   -0.1662
+    -45.3452,   -0.0707,  -16.3512,   -0.2292, 0, 0, 0, 0,
+  0, 0, 0, 0, -45.3452,   -0.0707,  -16.3512,   -0.2292
 };
 
 
@@ -386,19 +384,20 @@ calculatRps(&pulseCount_3, &lastTime_3, &currentTime_3, &wheel_speed_3);
 
 // Optional: Print all RPS values for debugging
 
-Serial.print(wheel_speed_1);
-Serial.print(" ");
+// Serial.print(wheel_speed_1);
+// Serial.print(" ");
+// Serial.print(wheel_speed_2);
+// Serial.print(" ");
 
-Serial.print(wheel_speed_2);
-Serial.print(" ");
-Serial.println(wheel_speed_3);
-
-
+// Serial.println(wheel_speed_3);
 
 
-Phi_dot_x = 0.01528*wheel_speed_2 - 0.03055*wheel_speed_1+0.01528*wheel_speed_3; 
-Phi_dot_y = 0.0529*wheel_speed_3 - 0.0529*wheel_speed_2; 
 
+
+// Phi_dot_x = 0.01528*wheel_speed_2 - 0.03055*wheel_speed_1+0.01528*wheel_speed_3; 
+// Phi_dot_y = 0.0529*wheel_speed_3 - 0.0529*wheel_speed_2; 
+Phi_dot_x = r_w/r_k*0.86*(wheel_speed_2-wheel_speed_3);
+Phi_dot_y = r_w/r_k*(wheel_speed_1 - 0.5*wheel_speed_2 - 0.5*wheel_speed_3);
 
 current_time = millis();
 time_interval = (current_time - previous_time)/1000.00;
@@ -417,20 +416,20 @@ State_Matrix(5) = Phi_y_tot ;
 State_Matrix(6) = theta_dot_y ; 
 State_Matrix(7) = Phi_dot_y ; 
 
-if (abs(theta_xd) < 0.017){
-  State_Matrix(0) = 0 ;
-}
-if (abs(theta_yd) < 0.017){
-  State_Matrix(4) = 0 ;
-}
-if(abs(theta_dot_x) < 0.017){
+// if (abs(theta_xd) < 0.017){
+//   State_Matrix(0) = 0 ;
+// }
+// if (abs(theta_yd) < 0.017){
+//   State_Matrix(4) = 0 ;
+// }
+// if(abs(theta_dot_x) < 0.017){
 
-  State_Matrix(2) = 0; 
-}
+//   State_Matrix(2) = 0; 
+// }
 
-if(abs(theta_dot_y) < 0.017){
-  State_Matrix(6) = 0;
-}
+// if(abs(theta_dot_y) < 0.017){
+//   State_Matrix(6) = 0;
+// }
 
 Control_Input_Matrix = -K_matrix * State_Matrix ;     // return the input control Torque 
 
@@ -448,23 +447,39 @@ Current_current1 = (total_pwm3/255*12 - k_e * wheel_speed_3)/1.7;
 
 
 
-total_pwm1 = (1.65 * Desired_current_1 + 0.5 * wheel_speed_1) / 12 * 4096;
+total_pwm1 = (1.65 * Desired_current_1 + 0.5 * wheel_speed_1) / 12 * 4095;
 
-total_pwm2 = (1.65 * Desired_current_2 + 0.5 * wheel_speed_2) / 12 * 4096;
+total_pwm2 = (1.65 * Desired_current_2 + 0.5 * wheel_speed_2) / 12 * 4095;
 
-total_pwm3 = (1.65 * Desired_current_3 + 0.5 * wheel_speed_3) / 12 * 4096;
+total_pwm3 = (1.65 * Desired_current_3 + 0.5 * wheel_speed_3) / 12 * 4095;
 
 
 
-total_pwm1 = 4096/2;
-total_pwm2 = 4096/2;//4096/2;
-total_pwm3 = 0;
+// total_pwm1 = -4090;
+// total_pwm2 = -4090;//4096/2;
+// total_pwm3 = -4090;
 
+ratio_1 = total_pwm1/4095;
+ratio_2 = total_pwm2/4095;
+ratio_3 = total_pwm3/4095;
 
 writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
 writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 
+Serial.println("State Matrix:");
+for (int i = 0; i < 8; i++) {
+  Serial.print("State_Matrix[");
+  Serial.print(i);
+  Serial.print("]: ");
+  Serial.println(State_Matrix(i),4);
+}
+
+Serial.print(ratio_1);
+Serial.print(" ");
+Serial.print(ratio_2);
+Serial.print(" ");
+Serial.println(ratio_3);
 
 }
 
@@ -512,6 +527,7 @@ void encoderAB_ISR2(){
     // Update lastStateAB
     lastStateAB_2 = currentStateAB_2;
 }
+
 void encoderAB_ISR3(){
   currentStateAB_3 = (digitalRead(encoder0pinA_3) << 1) | digitalRead(encoder0pinB_3);
   // Update Encoder counts based on Phase switching
@@ -522,6 +538,7 @@ void encoderAB_ISR3(){
         (lastStateAB_3 == 0b01 && currentStateAB_3 == 0b00)) {
           direction3 = true; // Forward
           pulseCount_3++;
+          
   } else if ((lastStateAB_3 == 0b00 && currentStateAB_3 == 0b01) ||
              (lastStateAB_3 == 0b01 && currentStateAB_3 == 0b11) ||
              (lastStateAB_3 == 0b11 && currentStateAB_3 == 0b10) ||
@@ -536,21 +553,19 @@ void encoderAB_ISR3(){
 
 
 
-
 void calculatRps(volatile int *pulseCount, volatile unsigned long *lastTime , volatile unsigned long *currentTime,float *rps){
   *currentTime = millis();
   if (*currentTime - *lastTime >= oneSecond){
     noInterrupts();
     int pulseCopy = *pulseCount;
     interrupts();
-    Serial.print("Pulse Count: ");
-    Serial.print(pulseCopy);
-    Serial.print(" | rps: ");
-    *rps = (float)pulseCopy / 9600;
+    // Serial.print("Pulse Count: ");
+    // Serial.print(pulseCopy);
+    // Serial.print(" | rps: ");
+    *rps = (float)pulseCopy / 960;
     // Serial.print(rps);
     // Serial.print(" | Direction: ");
     // Serial.println(direction1 ? "Forward" : "Reverse");
-    
     *pulseCount = 0;
     *lastTime = *currentTime;
   
@@ -608,6 +623,7 @@ void calculatRps(volatile int *pulseCount, volatile unsigned long *lastTime , vo
 //   total_pwm1 = k_e * pidCorrection1 / 12 * 255;
 //   writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 // }
+
 
 // void CorrectionPID2(double wheel_speed, double desired_velocity) {
 
