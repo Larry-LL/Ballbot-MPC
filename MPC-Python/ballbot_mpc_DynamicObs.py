@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 
 
-class BallbotMPC:
+class BallbotMPC_DO:
     def __init__(self, Q, R, Qf, nx, nu, u_min, u_max):
         self.Q = Q   # State cost matrix
         self.R = R   # Control input cost matrix
@@ -18,7 +18,9 @@ class BallbotMPC:
         self.N = 30  # Prediction horizon
         self.T = 0.1  # Time step
 
+    def dynamic_obs_traj(self,t):
 
+        return 
     def trajectory_optimization_with_scipy(self,start, goal, obstacles, num_waypoints=70):
         x_start = start[0]
         y_start = start[1]
