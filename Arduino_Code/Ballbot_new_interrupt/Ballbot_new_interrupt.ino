@@ -25,17 +25,18 @@ float pwm_1;    //motor 3
 int duration_1 = 0;
 boolean Direction_1;
 byte encoder0PinALast_1;
-const byte encoder0pinA_1 = 35; // Pin A
-const byte encoder0pinB_1 = 14; // Pin B
+const byte encoder0pinA_1 = 36; //35; // Pin A
+const byte encoder0pinB_1 = 37; //14; // Pin B
 float omega_1 ; 
-#define Motor1_dir_1 9
-#define Motor1_dir_2 10
-#define PWM_pin_1 27
+#define Motor1_dir_1 33
+#define Motor1_dir_2 34
+#define PWM_pin_1 35
 #define PWM_channel_1 0
 //new_encoder_setup 
 volatile uint8_t lastStateAB_1 = 0;
 volatile uint8_t currentStateAB_1 = 0;
 volatile int pulseCount_1 = 0;
+volatile int pulseCount_distance_1 = 0;
 volatile bool direction1 = true;
 
 //Motor #2       Motor 1 
@@ -43,36 +44,40 @@ float pwm_2 ;
 int duration_2 = 0;
 boolean Direction_2;
 byte encoder0PinALast_2;
-const byte encoder0pinA_2 = 32;//39; // Pin A
-const byte encoder0pinB_2 = 5;//36; // Pin B
+const byte encoder0pinA_2 = 7;//32; // Pin A
+const byte encoder0pinB_2 = 16;//5; // Pin B
 float omega_2 ; 
-#define Motor2_dir_1 26
-#define Motor2_dir_2 25
-#define PWM_pin_2 19
+#define Motor2_dir_1 4
+#define Motor2_dir_2 5
+#define PWM_pin_2 6
 #define PWM_channel_2 1
 //new_encoder_setup 
 volatile uint8_t lastStateAB_2 = 0;
 volatile uint8_t currentStateAB_2 = 0;
 volatile int pulseCount_2 = 0;
 volatile bool direction2 = true;
+volatile int pulseCount_distance_2 = 0;
+
 
 //Motor #3
 float pwm_3 ;
 int duration_3 = 0;
 boolean Direction_3;
 byte encoder0PinALast_3;
-const byte encoder0pinA_3 = 39;//32; // Pin A
-const byte encoder0pinB_3 = 36;//5; // Pin B     motor 2
+const byte encoder0pinA_3 = 41;//32; // Pin A
+const byte encoder0pinB_3 = 42;//5; // Pin B     motor 2
 float omega_3 ; 
-#define Motor3_dir_1 4
-#define Motor3_dir_2 18 
-#define PWM_pin_3 23
+#define Motor3_dir_1 38
+#define Motor3_dir_2 39 
+#define PWM_pin_3 40
 #define PWM_channel_3 2
 //new_encoder_setup 
 volatile uint8_t lastStateAB_3 = 0;
 volatile uint8_t currentStateAB_3 = 0;
 volatile int pulseCount_3 = 0;
 volatile bool direction3 = true;
+volatile int pulseCount_distance_3 = 0;
+
 
 
 
@@ -107,7 +112,6 @@ long int wheel_distance_2 = 0 ;
 long int wheel_distance_3 = 0 ; 
 long int loop_time = 0; 
 int loop_max = 20 ; 
-float wheel_inertia = 0.0001; 
 float D_pwm1  ; 
 float D_pwm2  ; 
 float D_pwm3  ; 
@@ -171,6 +175,10 @@ float duration_3_avg;
 float Desired_Torque_1;
 float Desired_Torque_2;
 float Desired_Torque_3;
+float Total_phi_1;
+float Total_phi_2;
+float Total_phi_3;
+
 double Desired_current_1; 
 double Desired_current_2; 
 double Desired_current_3; 
@@ -388,7 +396,6 @@ calculatRps(&pulseCount_3, &lastTime_3, &currentTime_3, &wheel_speed_3);
 // Serial.print(" ");
 // Serial.print(wheel_speed_2);
 // Serial.print(" ");
-
 // Serial.println(wheel_speed_3);
 
 
@@ -396,6 +403,7 @@ calculatRps(&pulseCount_3, &lastTime_3, &currentTime_3, &wheel_speed_3);
 
 // Phi_dot_x = 0.01528*wheel_speed_2 - 0.03055*wheel_speed_1+0.01528*wheel_speed_3; 
 // Phi_dot_y = 0.0529*wheel_speed_3 - 0.0529*wheel_speed_2; 
+
 Phi_dot_x = r_w/r_k*0.86*(wheel_speed_2-wheel_speed_3);
 Phi_dot_y = r_w/r_k*(wheel_speed_1 - 0.5*wheel_speed_2 - 0.5*wheel_speed_3);
 
@@ -403,8 +411,17 @@ current_time = millis();
 time_interval = (current_time - previous_time)/1000.00;
 previous_time = current_time;
 
-Phi_x_tot = Phi_x_tot + Phi_dot_x *time_interval; //rad
-Phi_y_tot = Phi_y_tot + Phi_dot_y *time_interval; 
+Total_phi_1 = 2*3.14*pulseCount_distance_1/9600;
+Total_phi_2 = 2*3.14*pulseCount_distance_2/9600;
+Total_phi_3 = 2*3.14*pulseCount_distance_3/9600;
+
+Phi_x_tot = r_w / (3 * r_k * 0.68) * (-2 * Total_phi_1 + Total_phi_2 + Total_phi_3);
+Phi_y_tot = r_w / (3 * r_k * 0.68) * (-1.73 * Total_phi_2 + 1.73 * Total_phi_3);
+
+
+
+// Phi_x_tot = Phi_x_tot + Phi_dot_x *time_interval; //rad
+// Phi_y_tot = Phi_y_tot + Phi_dot_y *time_interval; 
 
 State_Matrix(0) = theta_xd;  
 State_Matrix(1) = Phi_x_tot;  
@@ -455,31 +472,67 @@ total_pwm3 = (1.65 * Desired_current_3 + 0.5 * wheel_speed_3) / 12 * 4095;
 
 
 
-// total_pwm1 = -4090;
-// total_pwm2 = -4090;//4096/2;
-// total_pwm3 = -4090;
+total_pwm1 = 0;
+total_pwm2 = -4090;//4096/2;
+total_pwm3 = 4090;
 
 ratio_1 = total_pwm1/4095;
 ratio_2 = total_pwm2/4095;
 ratio_3 = total_pwm3/4095;
 
+///manual testing forward and reverse
+// if (test_direction) {
+//   pwm_1 = 255;
+//   pwm_2 = 255;
+//   pwm_3 = 255;
+//   writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
+//   writeMotor(pwm_2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
+//   writeMotor(pwm_3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
+// } else {
+
+//   pwm_1 = -255;
+//   pwm_2 = -255;
+//   pwm_3 = -255;
+//   writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
+//   writeMotor(pwm_2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
+//   writeMotor(pwm_3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
+// }
+
+// k++; 
+
+// if (k>=50){
+//   k = 0; 
+//   test_direction=!test_direction; 
+// }
+
+
+
 writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
 writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 
-Serial.println("State Matrix:");
-for (int i = 0; i < 8; i++) {
-  Serial.print("State_Matrix[");
-  Serial.print(i);
-  Serial.print("]: ");
-  Serial.println(State_Matrix(i),4);
-}
+// Serial.println("State Matrix:");
+// for (int i = 0; i < 8; i++) {
+//   Serial.print("State_Matrix[");
+//   Serial.print(i);
+//   Serial.print("]: ");
+//   Serial.println(State_Matrix(i),4);
+// }
 
-Serial.print(ratio_1);
+
+Serial.print(wheel_speed_1);
 Serial.print(" ");
-Serial.print(ratio_2);
+Serial.print(wheel_speed_2);
 Serial.print(" ");
-Serial.println(ratio_3);
+Serial.print(wheel_speed_3);
+Serial.print(" ");
+Serial.print(Phi_x_tot);
+Serial.print(" ");
+Serial.println(Phi_y_tot);
+// Serial.print(" ");
+// Serial.print(ratio_2);
+// Serial.print(" ");
+// Serial.println(ratio_3);
 
 }
 
@@ -495,16 +548,20 @@ void encoderAB_ISR1(){
         (lastStateAB_1 == 0b01 && currentStateAB_1 == 0b00)) {
           direction1 = true; // Forward
           pulseCount_1++;
+          pulseCount_distance_1++;
+
   } else if ((lastStateAB_1 == 0b00 && currentStateAB_1 == 0b01) ||
              (lastStateAB_1 == 0b01 && currentStateAB_1 == 0b11) ||
              (lastStateAB_1 == 0b11 && currentStateAB_1 == 0b10) ||
              (lastStateAB_1 == 0b10 && currentStateAB_1 == 0b00)) {
               direction1 = false; // Reverse
               pulseCount_1--;
+              pulseCount_distance_1--;
         }
     }
     // Update lastStateAB
     lastStateAB_1 = currentStateAB_1;
+
 }
 void encoderAB_ISR2(){
   currentStateAB_2 = (digitalRead(encoder0pinA_2) << 1) | digitalRead(encoder0pinB_2);
@@ -516,12 +573,14 @@ void encoderAB_ISR2(){
         (lastStateAB_2 == 0b01 && currentStateAB_2 == 0b00)) {
           direction2 = true; // Forward
           pulseCount_2++;
+          pulseCount_distance_2 ++;
   } else if ((lastStateAB_2 == 0b00 && currentStateAB_2 == 0b01) ||
              (lastStateAB_2 == 0b01 && currentStateAB_2 == 0b11) ||
              (lastStateAB_2 == 0b11 && currentStateAB_2 == 0b10) ||
              (lastStateAB_2 == 0b10 && currentStateAB_2 == 0b00)) {
               direction2 = false; // Reverse
               pulseCount_2--;
+              pulseCount_distance_2--;
         }
     }
     // Update lastStateAB
@@ -538,13 +597,15 @@ void encoderAB_ISR3(){
         (lastStateAB_3 == 0b01 && currentStateAB_3 == 0b00)) {
           direction3 = true; // Forward
           pulseCount_3++;
-          
+          pulseCount_distance_3++;
+
   } else if ((lastStateAB_3 == 0b00 && currentStateAB_3 == 0b01) ||
              (lastStateAB_3 == 0b01 && currentStateAB_3 == 0b11) ||
              (lastStateAB_3 == 0b11 && currentStateAB_3 == 0b10) ||
              (lastStateAB_3 == 0b10 && currentStateAB_3 == 0b00)) {
               direction3 = false; // Reverse
               pulseCount_3--;
+              pulseCount_distance_3--;
         }
     }
     // Update lastStateAB
