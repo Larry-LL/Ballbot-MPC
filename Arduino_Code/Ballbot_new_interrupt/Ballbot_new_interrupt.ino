@@ -208,6 +208,8 @@ const long interval = 5;
 float rpsMotor1 = 0.0;
 float rpsMotor2 = 0.0;
 float rpsMotor3 = 0.0;
+float phi_dot_max_x = 0;
+float phi_dot_max_y = 0;
 
 
 
@@ -220,8 +222,8 @@ boolean test_direction = true;
 
 
 Matrix<2, 8> K_matrix = {
-    -45.3452,   -0.0707,  -16.3512,   -0.2292, 0, 0, 0, 0,
-  0, 0, 0, 0, -45.3452,   -0.0707,  -16.3512,   -0.2292
+  -75.3357,   -0.1826,  -16.3357,   -1.3841, 0, 0, 0, 0,
+  0, 0, 0, 0,  -75.3357,   -0.1826,  -16.3357,   -1.3841
 };
 
 
@@ -404,8 +406,13 @@ calculatRps(&pulseCount_3, &lastTime_3, &currentTime_3, &wheel_speed_3);
 // Phi_dot_x = 0.01528*wheel_speed_2 - 0.03055*wheel_speed_1+0.01528*wheel_speed_3; 
 // Phi_dot_y = 0.0529*wheel_speed_3 - 0.0529*wheel_speed_2; 
 
-Phi_dot_x = r_w/r_k*0.86*(wheel_speed_2-wheel_speed_3);
-Phi_dot_y = r_w/r_k*(wheel_speed_1 - 0.5*wheel_speed_2 - 0.5*wheel_speed_3);
+// Phi_dot_x = r_w/r_k*0.86*(wheel_speed_2-wheel_speed_3);
+// Phi_dot_y = r_w/r_k*(wheel_speed_1 - 0.5*wheel_speed_2 - 0.5*wheel_speed_3);
+
+Phi_dot_x = r_w / (3 * r_k * 0.68) * (-2 * wheel_speed_1 + wheel_speed_2 + wheel_speed_3);
+Phi_dot_y = r_w / (3 * r_k * 0.68) * (-1.73 * wheel_speed_2 + 1.73 * wheel_speed_3);
+
+
 
 current_time = millis();
 time_interval = (current_time - previous_time)/1000.00;
@@ -433,20 +440,27 @@ State_Matrix(5) = Phi_y_tot ;
 State_Matrix(6) = theta_dot_y ; 
 State_Matrix(7) = Phi_dot_y ; 
 
-// if (abs(theta_xd) < 0.017){
-//   State_Matrix(0) = 0 ;
-// }
-// if (abs(theta_yd) < 0.017){
-//   State_Matrix(4) = 0 ;
-// }
-// if(abs(theta_dot_x) < 0.017){
+if (abs(theta_xd) < 0.017){
+  State_Matrix(0) = 0 ;
+}
+if (abs(theta_yd) < 0.017){
+  State_Matrix(4) = 0 ;
+}
+if(abs(theta_dot_x) < 0.017){
 
-//   State_Matrix(2) = 0; 
-// }
+  State_Matrix(2) = 0; 
+}
 
-// if(abs(theta_dot_y) < 0.017){
-//   State_Matrix(6) = 0;
-// }
+if(abs(theta_dot_y) < 0.017){
+  State_Matrix(6) = 0;
+}
+
+if(abs(theta_dot_x) > phi_dot_max_x){
+  phi_dot_max_x = theta_dot_x;
+}
+if(abs(theta_dot_y) > phi_dot_max_y){
+  phi_dot_max_y = theta_dot_y;
+}
 
 Control_Input_Matrix = -K_matrix * State_Matrix ;     // return the input control Torque 
 
@@ -472,9 +486,9 @@ total_pwm3 = (1.65 * Desired_current_3 + 0.5 * wheel_speed_3) / 12 * 4095;
 
 
 
-total_pwm1 = 0;
-total_pwm2 = -4090;//4096/2;
-total_pwm3 = 4090;
+// total_pwm1 = 0;
+// total_pwm2 = 4090;//4096/2;
+// total_pwm3 = -4090;
 
 ratio_1 = total_pwm1/4095;
 ratio_2 = total_pwm2/4095;
@@ -482,15 +496,15 @@ ratio_3 = total_pwm3/4095;
 
 ///manual testing forward and reverse
 // if (test_direction) {
-//   pwm_1 = 255;
-//   pwm_2 = 255;
-//   pwm_3 = 255;
+//   pwm_1 = 0;
+//   pwm_2 = -4090;
+//   pwm_3 = 4090;
 //   writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 //   writeMotor(pwm_2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
 //   writeMotor(pwm_3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 // } else {
 
-//   pwm_1 = -255;
+//   pwm_1 = 0;
 //   pwm_2 = -255;
 //   pwm_3 = -255;
 //   writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
@@ -511,24 +525,29 @@ writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
 writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 
-// Serial.println("State Matrix:");
-// for (int i = 0; i < 8; i++) {
-//   Serial.print("State_Matrix[");
-//   Serial.print(i);
-//   Serial.print("]: ");
-//   Serial.println(State_Matrix(i),4);
-// }
+Serial.println("State Matrix:");
+for (int i = 0; i < 8; i++) {
+  Serial.print("State_Matrix[");
+  Serial.print(i);
+  Serial.print("]: ");
+  Serial.println(State_Matrix(i),4);
+}
+
+Serial.print(phi_dot_max_x);
+Serial.print(" ");
+Serial.println(phi_dot_max_y);
 
 
-Serial.print(wheel_speed_1);
-Serial.print(" ");
-Serial.print(wheel_speed_2);
-Serial.print(" ");
-Serial.print(wheel_speed_3);
-Serial.print(" ");
-Serial.print(Phi_x_tot);
-Serial.print(" ");
-Serial.println(Phi_y_tot);
+
+// Serial.print(wheel_speed_1);
+// Serial.print(" ");
+// Serial.print(wheel_speed_2);
+// Serial.print(" ");
+// Serial.print(wheel_speed_3);
+// Serial.print(" ");
+// Serial.print(Phi_x_tot);
+// Serial.print(" ");
+// Serial.println(Phi_y_tot);
 // Serial.print(" ");
 // Serial.print(ratio_2);
 // Serial.print(" ");

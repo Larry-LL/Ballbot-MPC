@@ -25,7 +25,7 @@ ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
 # u_max = 4.9
 # tolerance =0.01
 
-case = 1
+case = 2
 
 if case == 1:
     x_current = np.zeros((8,1))
@@ -39,7 +39,7 @@ if case == 1:
     x_goal = np.array([0, 5, 0, 0, 0, 5, 0, 0])
     start = np.array([0,0])
     goal = np.array([x_goal[1],x_goal[5]])
-    tolerance = 0.5
+    tolerance = 0.6
     obstacles = [
         {"center": (4, 4), "radius": 1},
         {"center": (7, 8), "radius": 1.5},
@@ -129,18 +129,19 @@ if case == 2:
     thetay_positions = []
     thetax_positions = []
     iteration = 0
-    ahead_ref_idx = 2
+    ahead_ref_idx = 3
     start = np.array([0,0])
     target_center = [1,1]
     target_radius = 1
     num_waypoints = 30 
     x_start = np.array([0, 0, 0, 0, 0, 0, 0, 0])
-    x_goal = np.array([0, 1, 0, 0, 0, 0, 2, 0])
+    # x_goal = np.array([0, 0, 0, 0, 0, 0, 0, 0])
     idx = 0
     trajectory = ballbot_mpc.traj_follow_circle(target_center, target_radius, num_waypoints)
     x_ref = np.array([0, trajectory[0, 0], 0, 0, 0, trajectory[0, 1], 0, 0])
     while idx < num_waypoints-ahead_ref_idx:
         current_position = np.array([x_current[1], x_current[5]]).flatten()
+        x_goal = np.array([0, trajectory[idx,0], 0, 0, 0, trajectory[idx,1], 0, 0])
         
         if idx + ahead_ref_idx < len(trajectory) and np.linalg.norm(x_current.flatten() - x_ref) <= tolerance :
             x_ref = np.array([0, trajectory[idx+ahead_ref_idx, 0], 0, 0, 0, trajectory[idx+ahead_ref_idx, 1], 0, 0])
@@ -160,7 +161,7 @@ if case == 2:
         # if iteration >50 and np.linalg.norm(x_current.flatten() - stop_coordinates) < tolerance:
         #     break
     plt.figure(figsize=(8, 8))
-    plt.plot(x_positions, y_positions, 'bo-', label='Real Robot Trajectory') 
+    plt.plot(x_positions, y_positions, 'b-', label='Real Robot Trajectory') 
     plt.plot(trajectory[:,0],trajectory[:,1],'-', label = 'Planned Trajectory') 
     plt.scatter(x_goal[1], x_goal[5], color='red', marker='o', label='Goal Position (1,1)')  
     plt.xlabel("X Position")

@@ -22,6 +22,7 @@ class BallbotMPC_DO:
 
     def dynamic_obs_traj(self,start,goal,obs_radius, t_tot, num_steps=50 ):
         t = np.linspace(0,t_tot,num_steps)
+        print(t)
         obs_x = 2 * np.ones(num_steps)
         obs_y = 0.5 * t
         x_start = start[0]
@@ -32,6 +33,7 @@ class BallbotMPC_DO:
         y_initial_guess = np.linspace(y_start,y_goal,num_steps)
         decision_var = np.hstack((x_initial_guess,y_initial_guess))
         
+
         def traj_cost(trajectory): 
             x = trajectory[:num_steps]
             y = trajectory[num_steps:] 
@@ -39,6 +41,7 @@ class BallbotMPC_DO:
         
         def traj_constraints():
             cons = []
+            weight = 5
             cons.append({'type': 'eq', 'fun': lambda traj: traj[0] - x_start})       # x_start
             cons.append({'type': 'eq', 'fun': lambda traj: traj[num_steps - 1] - x_goal})   # x_goal
             cons.append({'type': 'eq', 'fun': lambda traj: traj[num_steps] - y_start})      # y_start
@@ -47,7 +50,7 @@ class BallbotMPC_DO:
                 cons.append({
                     'type': 'ineq',  # Inequality: distance >= radius
                     'fun': lambda traj, i=i: 
-                        np.linalg.norm([traj[i] - obs_x[i], traj[num_steps + i] - obs_y[i]]) - obs_radius
+                        weight*(np.linalg.norm([traj[i] - obs_x[i], traj[num_steps + i] - obs_y[i]]) - obs_radius-0.5)
                 })
             return cons
         result = minimize(
@@ -299,8 +302,8 @@ ahead_ref_idx = 7
 start = np.array([0,0])
 goal = np.array([x_goal[1],x_goal[5]])
 obs_radius = 1
-t_tot = 10
-num_steps = 70
+t_tot = 5
+num_steps = 50
 
 trajectory, obs_x, obs_y, time_steps = ballbot_mpc.dynamic_obs_traj(start, goal, obs_radius, t_tot, num_steps)
 
