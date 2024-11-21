@@ -19,7 +19,7 @@ class BallbotMPC:
         self.T = 0.1  # Time step
 
 
-    def trajectory_optimization_with_scipy(self,start, goal, obstacles, num_waypoints=70):
+    def trajectory_optimization_static_obs(self,start, goal, obstacles, num_waypoints=70):
         x_start = start[0]
         y_start = start[1]
         x_goal = goal[0]
@@ -62,27 +62,41 @@ class BallbotMPC:
             raise ValueError(f"Optimization failed: {result.message}")
         # Reshape the optimized trajectory into Nx2
         optimized_trajectory = np.vstack((result.x[:num_waypoints], result.x[num_waypoints:])).T
-        plt.figure(figsize=(8, 8))
-        plt.plot(optimized_trajectory[:, 0], optimized_trajectory[:, 1], 'b-o', label="Optimized Trajectory")
-        plt.scatter(x_start, y_start, color='green', label="Start Point")
-        plt.scatter(x_goal, y_goal, color='red', label="Goal Point")
+        # plt.figure(figsize=(8, 8))
+        # plt.plot(optimized_trajectory[:, 0], optimized_trajectory[:, 1], 'b-o', label="Optimized Trajectory")
+        # plt.scatter(x_start, y_start, color='green', label="Start Point")
+        # plt.scatter(x_goal, y_goal, color='red', label="Goal Point")
         
-        for obs in obstacles:
-            center = obs["center"]
-            radius = obs["radius"]
-            circle = plt.Circle(center, radius, color='gray', alpha=0.5, label="Obstacle")
-            plt.gca().add_artist(circle)
+        # for obs in obstacles:
+        #     center = obs["center"]
+        #     radius = obs["radius"]
+        #     circle = plt.Circle(center, radius, color='gray', alpha=0.5, label="Obstacle")
+        #     plt.gca().add_artist(circle)
 
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("Trajectory Optimization with Obstacles")
-        plt.grid(True)
-        plt.legend()
-        plt.axis("equal")
-        plt.show()
+        # plt.xlabel("X")
+        # plt.ylabel("Y")
+        # plt.title("Trajectory Optimization with Obstacles")
+        # plt.grid(True)
+        # plt.legend()
+        # plt.axis("equal")
+        # plt.show()
 
 
         return optimized_trajectory
+
+    def traj_follow_circle(self,target_center, target_radius, num_waypoints):
+        
+        theta_points = np.linspace(-np.pi/2, 3/2 * np.pi, num_waypoints)
+        waypoints = np.zeros((num_waypoints, 2))  # Each row: [x, y]
+        
+        # Calculate waypoints
+        for i in range(num_waypoints):
+            waypoints[i, 0] = target_center[0] + target_radius * np.cos(theta_points[i])  # x-coordinate
+            waypoints[i, 1] = target_center[1] + target_radius * np.sin(theta_points[i])  # y-coordinate
+        
+        return waypoints
+
+
 
     def calcaulte_continous_dynamics(self,x_current,u_current):  # linearize at referenced state x_current & u_current
         u_current = u_current.reshape(-1, 1)
@@ -188,7 +202,6 @@ class BallbotMPC:
         # Initial state constraint
         constraints.append(x[0, :] == x_current.flatten())
 
-        
         # Input saturation constraints
         for i in range(self.N - 1):
             constraints.append(u[i, :] >= self.umin)
@@ -202,10 +215,6 @@ class BallbotMPC:
         # Dynamics constraints
         for i in range(self.N - 1):
             constraints.append(x[i + 1, :] == Ad @ x[i, :] + Bd @ u[i, :])
-
-        # add obstacle constraints
-
-        
 
         # Cost function
         cost = 0
@@ -256,7 +265,7 @@ class BallbotMPC:
 #     {"center": (7, 8), "radius": 1.5},
 # ]
 
-# trajectory = ballbot_mpc.trajectory_optimization_with_scipy(start, goal, obstacles)
+# trajectory = ballbot_mpc.trajectory_optimization_static_obs(start, goal, obstacles)
 # # print(trajcotory)
 
 

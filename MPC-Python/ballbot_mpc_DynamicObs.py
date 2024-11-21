@@ -19,6 +19,8 @@ class BallbotMPC_DO:
         self.T = 0.1  # Time step
 
     def dynamic_obs_traj(self,t):
+        
+
 
         return 
     def trajectory_optimization_with_scipy(self,start, goal, obstacles, num_waypoints=70):
