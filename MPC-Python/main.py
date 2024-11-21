@@ -25,8 +25,9 @@ ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
 # u_max = 4.9
 # tolerance =0.01
 
+case = 1
 
-if False:
+if case == 1:
     x_current = np.zeros((8,1))
     u_current = np.zeros((nu))
     x_positions = []
@@ -35,17 +36,20 @@ if False:
     thetax_positions = []
     iteration = 0
     ahead_ref_idx = 7
-    x_goal = np.array([0, 5, 0, 0, 0, 6, 0, 0])
+    x_goal = np.array([0, 5, 0, 0, 0, 5, 0, 0])
     start = np.array([0,0])
     goal = np.array([x_goal[1],x_goal[5]])
+    tolerance = 0.5
     obstacles = [
         {"center": (4, 4), "radius": 1},
         {"center": (7, 8), "radius": 1.5},
     ]
-
+    closest_idx = 0
     trajectory = ballbot_mpc.trajectory_optimization_static_obs(start, goal, obstacles)
     # print(trajcotory)
 
+    x_ref = np.array([0, trajectory[0, 0], 0, 0, 0, trajectory[0, 1], 0, 0])
+ 
 
     while np.linalg.norm(x_current.flatten() - x_goal) > tolerance:
         current_position = np.array([x_current[1], x_current[5]]).flatten()
@@ -53,13 +57,13 @@ if False:
         distances = np.linalg.norm(trajectory - current_position, axis=1)
 
         # Find the index of the closest waypoint
-        closest_idx = np.argmin(distances)
+        current_error = np.linalg.norm(x_current.flatten() - x_ref)
         
-        if closest_idx + ahead_ref_idx < len(trajectory):
+        if closest_idx + ahead_ref_idx < len(trajectory) and current_error <= tolerance:
             x_ref = np.array([0, trajectory[closest_idx+ahead_ref_idx, 0], 0, 0, 0, trajectory[closest_idx+ahead_ref_idx, 1], 0, 0])
+            closest_idx += ahead_ref_idx
         else:
             x_ref = x_goal
-
         x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal , x_ref)
         iteration +=1
         x_positions.append(x_current[1, 0])  # x position (second state)
@@ -117,7 +121,7 @@ if False:
 
 
 
-if True: 
+if case == 2: 
     x_current = np.zeros((8,1))
     u_current = np.zeros((nu))
     x_positions = []

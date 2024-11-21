@@ -1,73 +1,53 @@
 import numpy as np
-from scipy.optimize import minimize
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 
-# Parameters
-N = 20  # Number of waypoints
-x_start, y_start = 0.0, 0.0  # Start point
-x_goal, y_goal = 5.0, 5.0    # Goal point
-obstacles = [
-    {"center": (2.0, 2.0), "radius": 0.5},  # Circular obstacle 1
-    {"center": (3.0, 4.0), "radius": 0.7},  # Circular obstacle 2
-]
+# Define the obstacle's motion
+def obstacle_position(t):
+    # Example: Linear motion along x-axis
+    x = 2 + 0.5 * t  # Starting at (2, 2), moving right
+    y = 2
+    return np.array([x, y])
 
-# Flattened initial guess (straight-line path)
-z0 = np.linspace(0, 5, N * 2)
+# Define the robot's trajectory
+time_steps = np.linspace(0, 10, 100)  # 10 seconds, 100 steps
+robot_trajectory = np.array([[t, np.sin(t)] for t in time_steps])  # Example trajectory
 
-# Objective function
-def objective(z):
-    z = z.reshape(N, 2)  # Reshape into (N, 2) array
-    cost = 0
-    for i in range(N - 1):
-        cost += np.sum((z[i + 1] - z[i]) ** 2)  # Smoothness cost (squared distance)
-    return cost
+# Initialize the plot
+fig, ax = plt.subplots()
+ax.set_xlim(0, 10)
+ax.set_ylim(-2, 5)
+ax.set_title("Trajectory Planning with Moving Obstacle")
 
-# Constraints
-constraints = []
+# Draw static elements
+robot_line, = ax.plot([], [], 'b-', label="Robot Trajectory")  # Robot trajectory
+robot_point, = ax.plot([], [], 'bo', label="Robot Position")   # Robot current position
+obstacle, = ax.plot([], [], 'ro', label="Moving Obstacle")     # Obstacle
 
-# Start and goal constraints
-constraints.append({'type': 'eq', 'fun': lambda z: z[0] - x_start})  # x_start
-constraints.append({'type': 'eq', 'fun': lambda z: z[1] - y_start})  # y_start
-constraints.append({'type': 'eq', 'fun': lambda z: z[-2] - x_goal})  # x_goal
-constraints.append({'type': 'eq', 'fun': lambda z: z[-1] - y_goal})  # y_goal
+# Animation update function
+def update(frame):
+    t = time_steps[frame]
+    
+    # Update obstacle position
+    obs_pos = obstacle_position(t)
+    obstacle.set_data([obs_pos[0]], [obs_pos[1]])  # Use lists for single points
+    
+    # Update robot position
+    robot_pos = robot_trajectory[frame]
+    robot_point.set_data([robot_pos[0]], [robot_pos[1]])  # Use lists for single points
+    
+    # Update trajectory
+    robot_line.set_data(robot_trajectory[:frame+1, 0], robot_trajectory[:frame+1, 1])
+    
+    return robot_line, robot_point, obstacle
 
-# Obstacle avoidance constraints
-for obs in obstacles:
-    obs_center = np.array(obs["center"])
-    obs_radius = obs["radius"]
-    for i in range(N):
-        constraints.append({
-            'type': 'ineq',  # Inequality constraint: >= 0
-            'fun': lambda z, i=i, obs_center=obs_center, obs_radius=obs_radius: 
-                np.linalg.norm(z[2*i:2*i+2] - obs_center) - obs_radius
-        })
+# Create the animation
+ani = FuncAnimation(
+    fig, update, frames=len(time_steps), interval=100, blit=True
+)
 
-# Solve the optimization problem
-result = minimize(objective, z0, constraints=constraints, method='SLSQP')
+# Add legend
+ax.legend()
 
-# Extract the solution
-if result.success:
-    z_opt = result.x.reshape(N, 2)
-    x_path, y_path = z_opt[:, 0], z_opt[:, 1]
-else:
-    print("Optimization failed:", result.message)
-    z_opt = z0.reshape(N, 2)
-    x_path, y_path = z_opt[:, 0], z_opt[:, 1]
-
-# Plot the results
-plt.figure(figsize=(8, 8))
-plt.plot(x_path, y_path, 'b-o', label="Planned Path")
-plt.scatter([x_start, x_goal], [y_start, y_goal], color="red", label="Start/Goal")
-
-# Plot obstacles
-for obs in obstacles:
-    circle = plt.Circle(obs["center"], obs["radius"], color="gray", alpha=0.5)
-    plt.gca().add_artist(circle)
-
-plt.legend()
-plt.xlabel("X")
-plt.ylabel("Y")
-plt.title("Optimization-Based Path Planning (SciPy)")
-plt.axis("equal")
-plt.grid(True)
+# Show the animation
 plt.show()
