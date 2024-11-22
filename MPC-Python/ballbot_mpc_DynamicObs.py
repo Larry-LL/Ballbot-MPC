@@ -20,11 +20,16 @@ class BallbotMPC_DO:
         self.N = 30  # Prediction horizon
         self.T = 0.1  # Time step
 
-    def dynamic_obs_traj(self,start,goal,obs_radius, t_tot, num_steps=50 ):
+    def dynamic_obs_traj(self,start,goal,obs1_radius,obs2_radius,t_tot, num_steps=50 ):
         t = np.linspace(0,t_tot,num_steps)
         print(t)
-        obs_x = 2 * np.ones(num_steps)
-        obs_y = 0.5 * t
+        #obs1 setup 
+        obs1_x = 1 * np.ones(num_steps)
+        obs1_y = 0.5 * t
+
+        #obs2 setup
+        obs2_x = 4 * np.ones(num_steps)
+        obs2_y = 1.02 * t 
         x_start = start[0]
         y_start = start[1]
         x_goal = goal[0]
@@ -33,6 +38,7 @@ class BallbotMPC_DO:
         y_initial_guess = np.linspace(y_start,y_goal,num_steps)
         decision_var = np.hstack((x_initial_guess,y_initial_guess))
         
+
 
         def traj_cost(trajectory): 
             x = trajectory[:num_steps]
@@ -50,8 +56,15 @@ class BallbotMPC_DO:
                 cons.append({
                     'type': 'ineq',  # Inequality: distance >= radius
                     'fun': lambda traj, i=i: 
-                        weight*(np.linalg.norm([traj[i] - obs_x[i], traj[num_steps + i] - obs_y[i]]) - obs_radius-0.5)
+                        weight*(np.linalg.norm([traj[i] - obs1_x[i], traj[num_steps + i] - obs1_y[i]]) - obs1_radius-0.5)
                 })
+                
+                cons.append({
+                    'type': 'ineq',  # Inequality: distance >= radius
+                    'fun': lambda traj, i=i: 
+                        weight*(np.linalg.norm([traj[i] - obs2_x[i], traj[num_steps + i] - obs2_y[i]]) - obs2_radius-0.2)
+                })
+
             return cons
         result = minimize(
         traj_cost,
@@ -66,7 +79,7 @@ class BallbotMPC_DO:
         # Reshape the optimized trajectory into Nx2
         optimized_trajectory = np.vstack((result.x[:num_steps], result.x[num_steps:])).T
 
-        return optimized_trajectory, obs_x, obs_y, t
+        return optimized_trajectory, obs1_x, obs1_y, obs2_x , obs2_y, t
     
 
     def trajectory_optimization_static_obs(self,start, goal, obstacles, num_waypoints=70):
@@ -252,9 +265,6 @@ class BallbotMPC_DO:
         # Dynamics constraints
         for i in range(self.N - 1):
             constraints.append(x[i + 1, :] == Ad @ x[i, :] + Bd @ u[i, :])
-
-        # add obstacle constraints
-
         
 
         # Cost function
@@ -278,64 +288,76 @@ class BallbotMPC_DO:
 
         return x_current, u_current
 
-Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
-R = np.diag([5,5])
-Qf = np.diag([8, 50, 8, 10,8, 50, 8, 10])
-x_goal = np.array([0, 5, 0, 0, 0, 5, 0, 0])
-nx = 8
-nu = 2
-u_min = -4.9
-u_max = 4.9
-tolerance =0.01
 
-ballbot_mpc = BallbotMPC_DO(Q, R, Qf, nx, nu, u_min, u_max)
 
-x_current = np.zeros((8,1))
-u_current = np.zeros((nu))
-x_positions = []
-y_positions = []
-thetay_positions = []
-thetax_positions = []
-iteration = 0
-ahead_ref_idx = 7
+# Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
+# R = np.diag([5,5])
+# Qf = np.diag([8, 50, 8, 10,8, 50, 8, 10])
+# x_goal = np.array([0, 5, 0, 0, 0, 5, 0, 0])
+# nx = 8
+# nu = 2
+# u_min = -4.9
+# u_max = 4.9
+# tolerance =0.01
 
-start = np.array([0,0])
-goal = np.array([x_goal[1],x_goal[5]])
-obs_radius = 1
-t_tot = 5
-num_steps = 50
+# ballbot_mpc = BallbotMPC_DO(Q, R, Qf, nx, nu, u_min, u_max)
 
-trajectory, obs_x, obs_y, time_steps = ballbot_mpc.dynamic_obs_traj(start, goal, obs_radius, t_tot, num_steps)
+# x_current = np.zeros((8,1))
+# u_current = np.zeros((nu))
+# x_positions = []
+# y_positions = []
+# thetay_positions = []
+# thetax_positions = []
+# iteration = 0
+# ahead_ref_idx = 7
 
-# Plot and animate
-fig, ax = plt.subplots()
-ax.set_xlim(-1, 6)
-ax.set_ylim(-1, 6)
-ax.set_title("Planned Trajectory with Animated Moving Obstacle")
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
+# start = np.array([0,0])
+# goal = np.array([x_goal[1],x_goal[5]])
+# obs1_radius = 0.5
+# obs2_radius = 0.7
+# t_tot = 5
+# num_steps = 50
 
-# Static elements
-ax.plot(trajectory[:, 0], trajectory[:, 1], 'b-', label="Planned Trajectory")  # Planned trajectory
-robot_point, = ax.plot([], [], 'bo', label="Robot Position")                  # Robot position
-obstacle_center, = ax.plot([], [], 'ro', label="Moving Obstacle")
-obstacle_radius = Circle((0, 0), obs_radius, color='r', alpha=0.3)  # Transparent circle
-ax.add_patch(obstacle_radius)  # Add circle to the plot
+# trajectory, obs1_x, obs1_y, obs2_x, obs2_y, time_steps = ballbot_mpc.dynamic_obs_traj(start, goal, obs1_radius, obs2_radius, t_tot, num_steps)
 
-# Animation update function
-def update(frame):
-    # Update robot position
-    robot_point.set_data([trajectory[frame, 0]], [trajectory[frame, 1]])  # Wrap in lists
+# # Plot and animate
+# fig, ax = plt.subplots()
+# ax.set_xlim(-1, 6)
+# ax.set_ylim(-1, 6)
+# ax.set_title("Planned Trajectory with Animated Moving Obstacle")
+# ax.set_xlabel("X")
+# ax.set_ylabel("Y")
 
-    # Update obstacle position
-    obstacle_center.set_data([obs_x[frame]], [obs_y[frame]])  # Wrap in lists
-    obstacle_radius.center = (obs_x[frame], obs_y[frame])     # Update circle center
+# # Static elements
+# ax.plot(trajectory[:, 0], trajectory[:, 1], 'b-', label="Planned Trajectory")  # Planned trajectory
+# robot_point, = ax.plot([], [], 'bo', label="Robot Position")                  # Robot position
+# obstacle_center, = ax.plot([], [], 'ro', label="Moving Obstacle")
+# obstacle_radius = Circle((0, 0), obs1_radius, color='r', alpha=0.3)  # Transparent circle
+# ax.add_patch(obstacle_radius)  # Add circle to the plot
 
-    return robot_point, obstacle_center, obstacle_radius
+# obstacle_center2, = ax.plot([], [], 'ro', label="Moving Obstacle2")
+# obstacle_radius2 = Circle((0, 0), obs2_radius, color='r', alpha=0.3)  # Transparent circle
+# ax.add_patch(obstacle_radius2)  # A
 
-# Create the animation
-ani = FuncAnimation(fig, update, frames=num_steps, interval=100, blit=True)
 
-# Add legend and show plot
-ax.legend()
-plt.show()
+
+# # Animation update function
+# def update(frame):
+#     # Update robot position
+#     robot_point.set_data([trajectory[frame, 0]], [trajectory[frame, 1]])  # Wrap in lists
+
+#     # Update obstacle position
+#     obstacle_center.set_data([obs1_x[frame]], [obs1_y[frame]])  # Wrap in lists
+#     obstacle_radius.center = (obs1_x[frame], obs1_y[frame])     # Update circle center
+    
+#     obstacle_center2.set_data([obs2_x[frame]], [obs2_y[frame]])  # Wrap in lists
+#     obstacle_radius2.center = (obs2_x[frame], obs2_y[frame])     # Update circle center
+    
+#     return robot_point, obstacle_center, obstacle_radius,obstacle_center2, obstacle_radius2
+
+# # Create the animation
+# ani = FuncAnimation(fig, update, frames=num_steps, interval=100, blit=True)
+
+# # Add legend and show plot
+# ax.legend()
+# plt.show()
