@@ -1,53 +1,22 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from sympy import symbols, integrate, sqrt
 
-# Define the obstacle's motion
-def obstacle_position(t):
-    # Example: Linear motion along x-axis
-    x = 2 + 0.5 * t  # Starting at (2, 2), moving right
-    y = 2
-    return np.array([x, y])
+# Define symbols
+x, y, z, a, b, m = symbols('x y z a b m')
 
-# Define the robot's trajectory
-time_steps = np.linspace(0, 10, 100)  # 10 seconds, 100 steps
-robot_trajectory = np.array([[t, np.sin(t)] for t in time_steps])  # Example trajectory
+# Volume of the solid
+z_upper = b - (x**2 + y**2) / a
+y_upper = sqrt(a*b - x**2)
+x_upper = sqrt(a*b)
 
-# Initialize the plot
-fig, ax = plt.subplots()
-ax.set_xlim(0, 10)
-ax.set_ylim(-2, 5)
-ax.set_title("Trajectory Planning with Moving Obstacle")
+# Define density
 
-# Draw static elements
-robot_line, = ax.plot([], [], 'b-', label="Robot Trajectory")  # Robot trajectory
-robot_point, = ax.plot([], [], 'bo', label="Robot Position")   # Robot current position
-obstacle, = ax.plot([], [], 'ro', label="Moving Obstacle")     # Obstacle
+V = integrate(integrate(integrate(1, (z, 0, z_upper)), (y, 0, y_upper)), (x, 0, x_upper))
+rho = m / V
+print("here:",V)
+# Define integrand for Ixx
+integrand_Ixx = rho * (y**2 + z**2)
 
-# Animation update function
-def update(frame):
-    t = time_steps[frame]
-    
-    # Update obstacle position
-    obs_pos = obstacle_position(t)
-    obstacle.set_data([obs_pos[0]], [obs_pos[1]])  # Use lists for single points
-    
-    # Update robot position
-    robot_pos = robot_trajectory[frame]
-    robot_point.set_data([robot_pos[0]], [robot_pos[1]])  # Use lists for single points
-    
-    # Update trajectory
-    robot_line.set_data(robot_trajectory[:frame+1, 0], robot_trajectory[:frame+1, 1])
-    
-    return robot_line, robot_point, obstacle
-
-# Create the animation
-ani = FuncAnimation(
-    fig, update, frames=len(time_steps), interval=100, blit=True
-)
-
-# Add legend
-ax.legend()
-
-# Show the animation
-plt.show()
+# Compute Ixx
+Ixx = integrate(integrate(integrate(integrand_Ixx, (z, 0, z_upper)), (y, 0, y_upper)), (x, 0, x_upper))
+print("done")
+print("Ixx:", Ixx.simplify())
