@@ -102,11 +102,11 @@ class BallbotMPC:
         u_current = u_current.reshape(-1, 1)
 
         theta_x = x_current[0,0]
-        theta_x_dot = x_current[1,0]
+        theta_x_dot = x_current[2,0]
         T_YZ = u_current[0,0]
 
         theta_y = x_current[4,0]
-        theta_y_dot = x_current[5,0]
+        theta_y_dot = x_current[6,0]
         T_XZ = u_current[1,0]
         epsilon = 1e-8
         

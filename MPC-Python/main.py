@@ -27,7 +27,7 @@ tolerance =0.02
 # u_max = 4.9
 # tolerance =0.01
 
-case = 3   # 1 = static obstacle || 2=circular traj following || 3 = known dynamic obs avoidance
+case = 1   # 1 = static obstacle || 2=circular traj following || 3 = known dynamic obs avoidance
 
 if case == 1:
     ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)

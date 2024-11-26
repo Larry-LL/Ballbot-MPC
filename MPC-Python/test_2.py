@@ -17,10 +17,10 @@ class BallbotMPC_DO:
         self.nu = nu  # Number of control inputs
         self.umin = u_min  # Minimum input constraint
         self.umax = u_max  # Maximum input constraint
-        self.N = 30  # Prediction horizon
+        self.N = 10  # Prediction horizon
         self.T = 0.1  # Time step
 
-    def dynamic_obs_traj(self,t_tot, num_steps=50 ):
+    def dynamic_obs_traj(self,t_tot, num_steps = 50 ):
         t = np.linspace(0,t_tot,num_steps)
         #obs1 setup 
         amplitude = 1
@@ -43,11 +43,11 @@ class BallbotMPC_DO:
         u_current = u_current.reshape(-1, 1)
 
         theta_x = x_current[0,0]
-        theta_x_dot = x_current[1,0]
+        theta_x_dot = x_current[2,0]
         T_YZ = u_current[0,0]
 
         theta_y = x_current[4,0]
-        theta_y_dot = x_current[5,0]
+        theta_y_dot = x_current[6,0]
         T_XZ = u_current[1,0]
         epsilon = 1e-8
         
@@ -123,11 +123,6 @@ class BallbotMPC_DO:
 
         return A_cont, B_cont
     # return A_cont, B_cont 
-    
-    def continuous_dynamics(self, x, u, A_cont, B_cont):
-        # continous dynamics first derivative
-        xdot = A_cont @ x + B_cont @ u
-        return xdot
 
     def discretize_system(self, A_cont, B_cont, T):
         # discretize time, euler integration 
@@ -136,146 +131,158 @@ class BallbotMPC_DO:
         return Ad, Bd
     #return A_d, B_d 
     
-    def compute_mpc(self, x_current, u_current, x_goal, x_ref, obs_traj):
-        # Unpack obstacle trajectories
-        obs1_traj, obs2_traj = obs_traj
-        obs1_x, obs1_y = obs1_traj
-        obs2_x, obs2_y = obs2_traj
+    def compute_mpc(self, x_current, u_current, x_goal, t_tot,num_steps,obs_radius=0.2):
 
-        # Initialize variables
-        u = np.zeros((self.N - 1, self.nu))  # Initial guess for control inputs
-        x = np.zeros((self.N, self.nx))     # States along the trajectory
-        x[0, :] = x_current.flatten()       # Initial state
+        # Prediction horizon and dimensions
+        N = self.N
+        nx = self.nx
+        nu = self.nu
+        
+        obs1_traj, obs2_traj = self.dynamic_obs_traj(t_tot, num_steps)
 
-        # Define bounds for control inputs
-        bounds = [(self.umin[i], self.umax[i]) for i in range(self.nu)] * (self.N - 1)
+        # Initial guess for control inputs and states
+        # u0 = np.vstack((u_current, np.zeros((N - 2, nu))))
+        
+
+        # In compute_mpc, check if self.u_prev exists
+        if hasattr(self, 'u_prev'):
+            u0 = np.vstack((self.u_prev[1:], self.u_prev[-1]))
+        else:
+            u0 = np.zeros((N - 1, nu))
+
+
+# Initialize states by interpolating between current state and goal state
+        x0 = np.linspace(x_current.flatten(), x_goal, N)
+
+        # Flatten control and state variables for optimization
+        z0 = np.hstack((u0.flatten(), x0.flatten()))
+
+        # Bounds for control inputs and states
+        u_bounds = [(self.umin, self.umax)] * ((N - 1) * nu)
+        x_bounds = [(None, None)] * (N * nx)  # No specific state bounds
+        bounds = u_bounds + x_bounds
 
         # Cost function
-        def cost_function(u_flat):
-            u = u_flat.reshape((self.N - 1, self.nu))
+        def cost_function(z):
+            # Extract control inputs and states from z
+            u = z[: (N - 1) * nu].reshape(N - 1, nu)
+            x = z[(N - 1) * nu :].reshape(N, nx)
+
             cost = 0
-            for i in range(self.N - 1):
-                # State update
-                A_cont, B_cont = self.calcaulte_continous_dynamics(x[i, :].reshape(-1, 1), u[i, :].reshape(-1, 1))
-                Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)
-                x[i + 1, :] = Ad @ x[i, :] + Bd @ u[i, :]
-
-                # State and control costs
-                cost += (x[i, :] - x_ref).T @ self.Q @ (x[i, :] - x_ref) + u[i, :].T @ self.R @ u[i, :]
-
-                # Obstacle avoidance penalties
-                obs1_dist = np.sqrt((x[i, 0] - obs1_x[i])**2 + (x[i, 1] - obs1_y[i])**2)
-                obs2_dist = np.sqrt((x[i, 0] - obs2_x[i])**2 + (x[i, 1] - obs2_y[i])**2)
-                cost += 100 / max(obs1_dist, 0.1) + 100 / max(obs2_dist, 0.1)  # Avoid divide by zero
-
-            # Terminal cost
-            cost += (x[-1, :] - x_goal).T @ self.Qf @ (x[-1, :] - x_goal)
+            for i in range(N - 1):
+                cost += (x[i] - x_goal).T @ self.Q @ (x[i] - x_goal) + u[i].T @ self.R @ u[i]
+            #termnial cost
+            cost += (x[N - 1] - x_goal).T @ self.Qf @ (x[N - 1] - x_goal)
             return cost
 
-        # Constraints
-        def dynamics_constraints(u_flat):
-            u = u_flat.reshape((self.N - 1, self.nu))
-            x_dyn = np.zeros((self.N, self.nx))
-            x_dyn[0, :] = x_current.flatten()
+
+        # Dynamic constraint
+        def dynamic_constraint(z):
+            u = z[: (N - 1) * nu].reshape(N - 1, nu)
+            x = z[(N - 1) * nu :].reshape(N, nx)
+    
             constraints = []
-            for i in range(self.N - 1):
-                A_cont, B_cont = self.calcaulte_continous_dynamics(x_dyn[i, :].reshape(-1, 1), u[i, :].reshape(-1, 1))
+            for i in range(N - 1):
+                x_i = x[i].reshape(-1, 1)  # (8, 1)
+                u_i = u[i].reshape(-1, 1)
+                A_cont, B_cont = self.calcaulte_continous_dynamics(x_i, u_i)
                 Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)
-                x_dyn[i + 1, :] = Ad @ x_dyn[i, :] + Bd @ u[i, :]
-                constraints.extend((x_dyn[i + 1, :] - x[i + 1, :]).flatten())
+                x_next_predicted = (Ad @ x_i + Bd @ u_i).flatten()
+                constraints.append(x[i + 1] - x_next_predicted)  # Discretized dynamics
+            return np.concatenate(constraints)
+
+        # Initial state constraint
+        def initial_constraint(z):
+            x = z[(N - 1) * nu :].reshape(N, nx)
+            return (x[0] - x_current).flatten()
+
+        def obstacle_avoidance_constraint(z):
+            x = z[(N - 1) * nu :].reshape(N, nx)
+            constraints = []
+            for i in range(N):
+                # Obstacle 1 avoidance
+                obs1_x, obs1_y = obs1_traj[:, i]
+                constraints.append(
+                    (x[i, 0] - obs1_x)**2 + (x[i, 1] - obs1_y)**2 - obs_radius**2
+                )
+                # Obstacle 2 avoidance
+                obs2_x, obs2_y = obs2_traj[:, i]
+                constraints.append(
+                    (x[i, 0] - obs2_x)**2 + (x[i, 1] - obs2_y)**2 - obs_radius**2
+                )
             return np.array(constraints)
 
-        # Solve optimization
-        result = minimize(
-            cost_function,
-            u.flatten(),
-            method='SLSQP',
-            bounds=bounds,
-            constraints={'type': 'eq', 'fun': dynamics_constraints},
-            options={'maxiter': 500, 'disp': True}
-        )
+        # Combine constraints
+        constraints = [
+            {"type": "eq", "fun": dynamic_constraint},
+            {"type": "eq", "fun": initial_constraint},
+            {"type": "ineq", "fun": obstacle_avoidance_constraint},
+        ]
 
-        # Extract control inputs
-        u_optimized = result.x.reshape((self.N - 1, self.nu))
-        u_current = u_optimized[0, :].reshape(-1, 1)
+        # Solve optimization problem
+        result = minimize(cost_function, z0, bounds=bounds, constraints=constraints)
 
-        # Update current state
-        A_cont, B_cont = self.calcaulte_continous_dynamics(x_current, u_current)
-        Ad, Bd = self.discretize_system(A_cont, B_cont, self.T)
-        x_current = Ad @ x_current + Bd @ u_current
+        # Extract optimal control inputs and states
+        u_opt = result.x[: (N - 1) * nu].reshape(N - 1, nu)
+        x_opt = result.x[(N - 1) * nu :].reshape(N, nx)
+        print(x_opt.shape)
+        print(u_opt.shape)
+
+        x_current = x_opt[1,:]
+        u_current = u_opt[0,:]
 
         return x_current, u_current
 
+        
+
+Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
+R = np.diag([5,5])
+Qf = np.diag([8, 1000, 8, 10, 8, 1000, 8, 10])
+x_goal = np.array([0, 3, 0, 0, 0, 2, 0, 0])
+x_current = np.zeros((8, 1))
+nx = 8
+nu = 2
+u_min = -4.9
+u_max = 4.9
+tolerance =0.2
+t_tot = 5
+u_current = np.zeros((nu))
+
+ballbot_mpc = BallbotMPC_DO(Q, R, Qf, nx, nu, u_min, u_max)
 
 
-# Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
-# R = np.diag([5,5])
-# Qf = np.diag([8, 50, 8, 10,8, 50, 8, 10])
-# x_goal = np.array([0, 5, 0, 0, 0, 5, 0, 0])
-# nx = 8
-# nu = 2
-# u_min = -4.9
-# u_max = 4.9
-# tolerance =0.01
+t_tot = 5
+num_steps = 100
+iteration = 0 
+x_pos = []
+y_pos = []
+print("processing")
 
-# ballbot_mpc = BallbotMPC_DO(Q, R, Qf, nx, nu, u_min, u_max)
+error = 5
 
-# x_current = np.zeros((8,1))
-# u_current = np.zeros((nu))
-# x_positions = []
-# y_positions = []
-# thetay_positions = []
-# thetax_positions = []
-# iteration = 0
-# ahead_ref_idx = 7
+while error >= tolerance:
+# while iteration <= 30:
+    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal, t_tot,num_steps)
+    x_pos.append(x_current[1])
+    y_pos.append(x_current[5])
+    x_pos_error = x_current[1] - x_goal[1]
+    y_pos_error = x_current[5] - x_goal[5]
+    error = np.linalg.norm([x_pos_error, y_pos_error])
 
-# start = np.array([0,0])
-# goal = np.array([x_goal[1],x_goal[5]])
-# obs1_radius = 0.5
-# obs2_radius = 0.7
-# t_tot = 5
-# num_steps = 50
-
-# trajectory, obs1_x, obs1_y, obs2_x, obs2_y, time_steps = ballbot_mpc.dynamic_obs_traj(start, goal, obs1_radius, obs2_radius, t_tot, num_steps)
-
-# # Plot and animate
-# fig, ax = plt.subplots()
-# ax.set_xlim(-1, 6)
-# ax.set_ylim(-1, 6)
-# ax.set_title("Planned Trajectory with Animated Moving Obstacle")
-# ax.set_xlabel("X")
-# ax.set_ylabel("Y")
-
-# # Static elements
-# ax.plot(trajectory[:, 0], trajectory[:, 1], 'b-', label="Planned Trajectory")  # Planned trajectory
-# robot_point, = ax.plot([], [], 'bo', label="Robot Position")                  # Robot position
-# obstacle_center, = ax.plot([], [], 'ro', label="Moving Obstacle")
-# obstacle_radius = Circle((0, 0), obs1_radius, color='r', alpha=0.3)  # Transparent circle
-# ax.add_patch(obstacle_radius)  # Add circle to the plot
-
-# obstacle_center2, = ax.plot([], [], 'ro', label="Moving Obstacle2")
-# obstacle_radius2 = Circle((0, 0), obs2_radius, color='r', alpha=0.3)  # Transparent circle
-# ax.add_patch(obstacle_radius2)  # A
+    iteration += 1
+    print(iteration)
+    print(error)
 
 
+plt.figure(figsize=(8, 6))
+plt.plot(x_pos, y_pos, marker='o', label="Trajectory")
 
-# # Animation update function
-# def update(frame):
-#     # Update robot position
-#     robot_point.set_data([trajectory[frame, 0]], [trajectory[frame, 1]])  # Wrap in lists
+# Labels and title
+plt.xlabel("X Position")
+plt.ylabel("Y Position")
+plt.title("Trajectory of Ballbot")
+plt.legend()
+plt.grid()
 
-#     # Update obstacle position
-#     obstacle_center.set_data([obs1_x[frame]], [obs1_y[frame]])  # Wrap in lists
-#     obstacle_radius.center = (obs1_x[frame], obs1_y[frame])     # Update circle center
-    
-#     obstacle_center2.set_data([obs2_x[frame]], [obs2_y[frame]])  # Wrap in lists
-#     obstacle_radius2.center = (obs2_x[frame], obs2_y[frame])     # Update circle center
-    
-#     return robot_point, obstacle_center, obstacle_radius,obstacle_center2, obstacle_radius2
-
-# # Create the animation
-# ani = FuncAnimation(fig, update, frames=num_steps, interval=100, blit=True)
-
-# # Add legend and show plot
-# ax.legend()
-# plt.show()
+# Show the plot
+plt.show()
