@@ -10,29 +10,30 @@ from matplotlib.patches import Circle
 
 class BallbotMPC_DO:
     def __init__(self, Q, R, Qf, nx, nu, u_min, u_max):
-        self.Q = Q   # State cost matrix
+        self.Q = Q   # State cost 
         self.R = R   # Control input cost matrix
         self.Qf = Qf  # Terminal state cost matrix
         self.nx = nx  # Number of state variables
         self.nu = nu  # Number of control inputs
         self.umin = u_min  # Minimum input constraint
         self.umax = u_max  # Maximum input constraint
-        self.N = 10  # Prediction horizon
+        self.N = 15  # Prediction horizon
         self.T = 0.1  # Time step
+        self.tilt_angle_limit = 0.174533  #theta x and y tilt angle limitation 
 
-    def dynamic_obs_traj(self,t_tot, num_steps = 50 ):
+    def dynamic_obs_traj(self,t_tot, num_steps):
         t = np.linspace(0,t_tot,num_steps)
         #obs1 setup 
         amplitude = 1
         frequency = 0.5
 
         obs1_x = amplitude * np.sin(2 * np.pi * frequency * t) + 1  # Moves back and forth around x=1
-        obs1_y = 0.5 * np.ones(num_steps)  # Constant y-coordinate
+        obs1_y = 1.5 * np.ones(num_steps)  # Constant y-coordinate
         obs1_traj = np.vstack((obs1_x,obs1_y))
 
         #obs2 setup
         obs2_x = amplitude * np.sin(2 * np.pi * frequency * t) + 3 # Moves back and forth around x=1
-        obs2_y = 0.5 * np.ones(num_steps)  # Constant y-coordinate 
+        obs2_y = 1.5 * np.ones(num_steps)  # Constant y-coordinate 
         obs2_traj = np.vstack((obs2_x,obs2_y))
 
         return obs1_traj, obs2_traj
@@ -131,19 +132,13 @@ class BallbotMPC_DO:
         return Ad, Bd
     #return A_d, B_d 
     
-    def compute_mpc(self, x_current, u_current, x_goal, t_tot,num_steps,obs_radius=0.2):
+    def compute_mpc(self, x_current, u_current, x_goal, obs_radius,obs1_traj, obs2_traj):
 
         # Prediction horizon and dimensions
         N = self.N
         nx = self.nx
         nu = self.nu
         
-        obs1_traj, obs2_traj = self.dynamic_obs_traj(t_tot, num_steps)
-
-        # Initial guess for control inputs and states
-        # u0 = np.vstack((u_current, np.zeros((N - 2, nu))))
-        
-
         # In compute_mpc, check if self.u_prev exists
         if hasattr(self, 'u_prev'):
             u0 = np.vstack((self.u_prev[1:], self.u_prev[-1]))
@@ -195,21 +190,34 @@ class BallbotMPC_DO:
         def initial_constraint(z):
             x = z[(N - 1) * nu :].reshape(N, nx)
             return (x[0] - x_current).flatten()
-
+        
+        # obstacle avoidance constraint
         def obstacle_avoidance_constraint(z):
             x = z[(N - 1) * nu :].reshape(N, nx)
             constraints = []
             for i in range(N):
                 # Obstacle 1 avoidance
                 obs1_x, obs1_y = obs1_traj[:, i]
+                # print("x",x[i, 1].shape)
                 constraints.append(
-                    (x[i, 0] - obs1_x)**2 + (x[i, 1] - obs1_y)**2 - obs_radius**2
+                    (x[i, 1] - obs1_x)**2 + (x[i, 5] - obs1_y)**2 - (obs_radius+0.05)**2
                 )
                 # Obstacle 2 avoidance
                 obs2_x, obs2_y = obs2_traj[:, i]
                 constraints.append(
-                    (x[i, 0] - obs2_x)**2 + (x[i, 1] - obs2_y)**2 - obs_radius**2
+                    (x[i, 1] - obs2_x)**2 + (x[i, 5] - obs2_y)**2 - (obs_radius+0.05)**2
                 )
+            return np.array(constraints)
+        # state constraints like the tilt angle 
+
+        def tilt_angle_constraint(z):
+            x = z[(N - 1) * nu :].reshape(N, nx)
+            tilt_angle_indices = [0, 4]
+            constraints = []
+            for i in range(N):  # Iterate over the horizon
+                for idx in tilt_angle_indices:  # Apply constraint to both columns
+                    constraints.append(self.tilt_angle_limit - x[i, idx] )
+                    constraints.append( x[i, idx] + self.tilt_angle_limit)
             return np.array(constraints)
 
         # Combine constraints
@@ -217,6 +225,7 @@ class BallbotMPC_DO:
             {"type": "eq", "fun": dynamic_constraint},
             {"type": "eq", "fun": initial_constraint},
             {"type": "ineq", "fun": obstacle_avoidance_constraint},
+            {"type": "ineq", "fun": tilt_angle_constraint},
         ]
 
         # Solve optimization problem
@@ -225,8 +234,6 @@ class BallbotMPC_DO:
         # Extract optimal control inputs and states
         u_opt = result.x[: (N - 1) * nu].reshape(N - 1, nu)
         x_opt = result.x[(N - 1) * nu :].reshape(N, nx)
-        print(x_opt.shape)
-        print(u_opt.shape)
 
         x_current = x_opt[1,:]
         u_current = u_opt[0,:]
@@ -235,54 +242,112 @@ class BallbotMPC_DO:
 
         
 
-Q = np.diag([100, 100, 100, 100,1000, 1000, 1000, 100])
+Q = np.diag([10, 100, 10, 10, 10, 100, 10, 10])
 R = np.diag([5,5])
-Qf = np.diag([8, 1000, 8, 10, 8, 1000, 8, 10])
-x_goal = np.array([0, 3, 0, 0, 0, 2, 0, 0])
+Qf = np.diag([8, 100, 8, 10, 8, 100, 8, 10])
+x_goal = np.array([0, 4, 0, 0, 0, 3, 0, 0])
 x_current = np.zeros((8, 1))
 nx = 8
 nu = 2
 u_min = -4.9
 u_max = 4.9
-tolerance =0.2
-t_tot = 5
+tolerance =0.5
+t_tot = 10
+num_steps = 100
 u_current = np.zeros((nu))
 
 ballbot_mpc = BallbotMPC_DO(Q, R, Qf, nx, nu, u_min, u_max)
 
-
-t_tot = 5
-num_steps = 100
 iteration = 0 
-x_pos = []
-y_pos = []
-print("processing")
+x_pos = [0]
+y_pos = [0]
+
+obs1_traj, obs2_traj = ballbot_mpc.dynamic_obs_traj(t_tot, num_steps)
+
+obs_radius = 0.3
 
 error = 5
 
+robot_trajectory = [(0, 0)]
+u1_list = [0]
+u2_list = [0]
+thetay_positions = [0]
+thetax_positions = [0]
 while error >= tolerance:
-# while iteration <= 30:
-    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal, t_tot,num_steps)
+# while iteration <= 50:
+    obs1_traj_slice = obs1_traj[:,iteration:iteration+ ballbot_mpc.N]
+    obs2_traj_slice = obs2_traj[:,iteration:iteration+ ballbot_mpc.N]
+    x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal,obs_radius,obs1_traj_slice, obs2_traj_slice)
     x_pos.append(x_current[1])
     y_pos.append(x_current[5])
+    u1_list.append(u_current[0])
+    u2_list.append(u_current[1])
+    thetay_positions.append(x_current[0])
+    thetax_positions.append(x_current[4]) 
+
+    robot_trajectory.append((x_current[1], x_current[5]))
+
+    x_current = x_current.flatten()
     x_pos_error = x_current[1] - x_goal[1]
     y_pos_error = x_current[5] - x_goal[5]
     error = np.linalg.norm([x_pos_error, y_pos_error])
 
     iteration += 1
     print(iteration)
-    print(error)
+print(thetay_positions)
+print(thetax_positions)
+print("u1_list",u1_list)
+print("u2_list",u2_list)
 
 
-plt.figure(figsize=(8, 6))
-plt.plot(x_pos, y_pos, marker='o', label="Trajectory")
 
-# Labels and title
-plt.xlabel("X Position")
-plt.ylabel("Y Position")
-plt.title("Trajectory of Ballbot")
+plt.figure(figsize=(8, 8))
+plt.xlim(-1, 1)  # Set x-axis limits (min, max)
+plt.ylim(-1, 1)  # Set y-axis limits (min, max)
+plt.plot(x_pos, y_pos, 'bo-', label='Trajectory')  
+plt.show()
+
+plt.figure(figsize=(10, 10))
+plt.plot(thetay_positions, thetax_positions, 'bo-', label='Trajectory')  
+plt.show()
+
+
+fig, ax = plt.subplots()
+ax.set_xlim(-1, 4)
+ax.set_ylim(-1, 4)
+ax.set_aspect('equal')
+ax.set_title("Dynamic Obstacles and Robot Trajectory")
+
+# Add dynamic obstacles
+obs1_circle = plt.Circle((0, 0), obs_radius, color='blue', alpha=0.5, label="Obstacle 1")
+obs2_circle = plt.Circle((0, 0), obs_radius, color='red', alpha=0.5, label="Obstacle 2")
+ax.add_artist(obs1_circle)
+ax.add_artist(obs2_circle)
+
+# Add robot trajectory
+robot_line, = ax.plot([], [], 'g-', label="Robot Trajectory")
+
+# Update function for animation
+def update(frame):
+    # Update dynamic obstacles
+    obs1_circle.center = (obs1_traj[0, frame], obs1_traj[1, frame])
+    obs2_circle.center = (obs2_traj[0, frame], obs2_traj[1, frame])
+
+    # Update robot trajectory
+    if frame < len(robot_trajectory):
+        robot_line.set_data(
+            [pos[0] for pos in robot_trajectory[:frame + 1]],
+            [pos[1] for pos in robot_trajectory[:frame + 1]]
+        )
+    return obs1_circle, obs2_circle, robot_line
+
+# Synchronize animation with time step
+logical_time_step = 0.1  # MPC and obstacle time step
+real_time_interval_ms = logical_time_step * 4000  # Convert seconds to milliseconds
+
+# Create animation
+ani = FuncAnimation(fig, update, frames=len(x_pos), interval=real_time_interval_ms, blit=True)
+
+# Display the animation
 plt.legend()
-plt.grid()
-
-# Show the plot
 plt.show()
