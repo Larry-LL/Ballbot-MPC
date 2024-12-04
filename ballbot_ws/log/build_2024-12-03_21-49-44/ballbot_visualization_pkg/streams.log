@@ -1,0 +1,29 @@
+[0.575s] Invoking command in '/home/lawrence/Ballbot-MPC/ballbot_ws/src/ballbot_visualization_pkg': PYTHONPATH=/home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ballbot_visualization_pkg build --build-base /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/build install --record /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/install.log --single-version-externally-managed install_data
+[0.782s] running egg_info
+[0.794s] writing ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/PKG-INFO
+[0.795s] writing dependency_links to ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/dependency_links.txt
+[0.795s] writing entry points to ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/entry_points.txt
+[0.795s] writing requirements to ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/requires.txt
+[0.796s] writing top-level names to ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/top_level.txt
+[0.822s] reading manifest file '../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/SOURCES.txt'
+[0.824s] writing manifest file '../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/SOURCES.txt'
+[0.824s] running build
+[0.824s] running build_py
+[0.824s] copying ballbot_visualization_pkg/state_publisher.py -> /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/build/lib/ballbot_visualization_pkg
+[0.824s] copying ballbot_visualization_pkg/__init__.py -> /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/build/lib/ballbot_visualization_pkg
+[0.824s] running install
+[0.828s] running install_lib
+[0.841s] copying /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/build/lib/ballbot_visualization_pkg/state_publisher.py -> /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages/ballbot_visualization_pkg
+[0.842s] byte-compiling /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages/ballbot_visualization_pkg/state_publisher.py to state_publisher.cpython-310.pyc
+[0.842s] running install_data
+[0.843s] copying resource/ballbot_visualization_pkg -> /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/share/ament_index/resource_index/packages
+[0.843s] copying package.xml -> /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/share/ballbot_visualization_pkg
+[0.843s] copying launch/ballbot_visualization.launch.py -> /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/share/ballbot_visualization_pkg/launch
+[0.843s] copying urdf/ballbot.urdf -> /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/share/ballbot_visualization_pkg/urdf
+[0.843s] running install_egg_info
+[0.857s] removing '/home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages/ballbot_visualization_pkg-0.0.0-py3.10.egg-info' (and everything under it)
+[0.857s] Copying ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info to /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages/ballbot_visualization_pkg-0.0.0-py3.10.egg-info
+[0.858s] running install_scripts
+[0.961s] Installing state_publisher script to /home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/ballbot_visualization_pkg
+[0.961s] writing list of installed files to '/home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/install.log'
+[0.983s] Invoked command in '/home/lawrence/Ballbot-MPC/ballbot_ws/src/ballbot_visualization_pkg' returned '0': PYTHONPATH=/home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/lawrence/Ballbot-MPC/ballbot_ws/install/ballbot_visualization_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/ballbot_visualization_pkg build --build-base /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/build install --record /home/lawrence/Ballbot-MPC/ballbot_ws/build/ballbot_visualization_pkg/install.log --single-version-externally-managed install_data

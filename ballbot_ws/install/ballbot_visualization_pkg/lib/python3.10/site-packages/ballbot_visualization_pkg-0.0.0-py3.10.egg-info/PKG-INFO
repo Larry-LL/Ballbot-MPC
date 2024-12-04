@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: ballbot_visualization_pkg
+Version: 0.0.0
+Summary: A package for visualizing ballbot trajectories and states in RViz2.
+Maintainer: lawrence
+Maintainer-email: lawrence@todo.todo
+License: Apache License 2.0
+Requires-Dist: setuptools
+Requires-Dist: transforms3d
+Provides-Extra: test
+Requires-Dist: pytest; extra == "test"

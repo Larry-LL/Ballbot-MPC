@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<robot name="ballbot">
+
+  <!-- Define the missing world link -->
+  <link name="world"/>
+
+  <!-- World Link -->
+  <link name="world_link"/>
+  <joint name="world_to_world_link" type="fixed">
+    <parent link="world"/>
+    <child link="world_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="world_to_base" type="fixed">
+    <parent link="world_link"/>
+    <child link="base_link"/>
+  </joint>
+
+  <!-- Base Link (Sphere) -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.1016"/>
+      <geometry>
+        <sphere radius="0.1016"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 0.5 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0 0.1016"/>
+      <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.02"/>
+    </inertial>
+  </link>
+
+  <!-- Intermediate Link -->
+  <link name="intermediate_link">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0.2032"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Cylinder (Tilted Body) -->
+  <link name="cylinder_link">
+    <visual>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.11" length="0.25"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="2.0"/>
+      <origin xyz="0 0 0.15"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Joint for Rotation about X-axis -->
+  <joint name="base_to_intermediate_x" type="revolute">
+    <parent link="base_link"/>
+    <child link="intermediate_link"/>
+    <origin xyz="0 0 0.2032" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="100" velocity="1.0" lower="-1.5" upper="1.5"/>
+  </joint>
+
+  <!-- Joint for Rotation about Y-axis -->
+  <joint name="intermediate_to_cylinder_y" type="revolute">
+    <parent link="intermediate_link"/>
+    <child link="cylinder_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="100" velocity="1.0" lower="-1.5" upper="1.5"/>
+  </joint>
+</robot>

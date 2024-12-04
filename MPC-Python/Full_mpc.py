@@ -1,5 +1,5 @@
 import numpy as np
-import cvxpy as cp
+# import cvxpy as cp
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize

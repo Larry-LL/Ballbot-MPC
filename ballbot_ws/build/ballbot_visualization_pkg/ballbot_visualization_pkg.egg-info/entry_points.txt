@@ -1,0 +1,2 @@
+[console_scripts]
+state_publisher = ballbot_visualization_pkg.state_publisher:main

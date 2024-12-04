@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<robot name="sphere_with_cylinder">
+
+  <!-- World Link -->
+  <link name="world">
+    <collision>
+      <origin xyz="0 0 0"/>
+      <geometry>
+        <plane size="10 10"/>  <!-- Ground plane -->
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Sphere Link -->
+  <link name="sphere_link">
+    <visual>
+      <origin xyz="0 0 0.1"/>
+      <geometry>
+        <sphere radius="0.1"/>  <!-- Sphere with radius 0.1m -->
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.1"/>
+      <geometry>
+        <sphere radius="0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>  <!-- Define sphere mass -->
+      <origin xyz="0 0 0.1"/>
+      <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.005"/>
+    </inertial>
+  </link>
+
+  <!-- Prismatic Joints for Sphere Translation -->
+  <joint name="world_to_sphere_x" type="prismatic">
+    <parent link="world"/>
+    <child link="x_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>  <!-- Translation along x-axis -->
+    <limit lower="-5.0" upper="5.0" effort="10" velocity="1.0"/>
+  </joint>
+
+  <link name="x_link">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="x_to_y" type="prismatic">
+    <parent link="x_link"/>
+    <child link="sphere_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>  <!-- Translation along y-axis -->
+    <limit lower="-5.0" upper="5.0" effort="10" velocity="1.0"/>
+  </joint>
+
+  <!-- Cylinder Link -->
+  <link name="cylinder_link">
+    <visual>
+      <origin xyz="0 0 0.25"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.5"/>  <!-- Cylinder on top of the sphere -->
+      </geometry>
+      <material name="red">
+        <color rgba="1 0 0 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0.5"/>
+      <origin xyz="0 0 0.25"/>
+      <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <!-- Joint for Cylinder Pitch -->
+  <joint name="sphere_to_cylinder_pitch" type="revolute">
+    <parent link="sphere_link"/>
+    <child link="pitch_link"/>
+    <origin xyz="0 0 0.2" rpy="0 0 0"/>  <!-- At the top of the sphere -->
+    <axis xyz="1 0 0"/>  <!-- Pitch around x-axis -->
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="1.0"/>
+  </joint>
+
+  <link name="pitch_link">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Joint for Cylinder Roll -->
+  <joint name="pitch_to_cylinder_roll" type="revolute">
+    <parent link="pitch_link"/>
+    <child link="cylinder_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>  <!-- Roll around y-axis -->
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="1.0"/>
+  </joint>
+
+</robot>
