@@ -44,8 +44,8 @@ if case == 1:
     goal = np.array([x_goal[1],x_goal[5]])
     tolerance = 0.6
     obstacles = [
-        {"center": (4, 4), "radius": 1},
-        {"center": (7, 8), "radius": 1.5},
+        {"center": (3, 3), "radius": 1},
+
     ]
     closest_idx = 0
     trajectory = ballbot_mpc.trajectory_optimization_static_obs(start, goal, obstacles)
@@ -93,8 +93,8 @@ if case == 1:
         plt.gca().add_artist(circle)
 
     # Add labels and title
-    plt.xlabel("X Position")
-    plt.ylabel("Y Position")
+    plt.xlabel("X Position (m)")
+    plt.ylabel("Y Position(m)")
     plt.title("Trajectory of X and Y Positions in MPC")
     plt.legend()
     plt.grid(True)
@@ -114,8 +114,8 @@ if case == 1:
     #     plt.gca().add_artist(circle)
 
     # Add labels and title for the second plot
-    plt.xlabel("Theta X Position")
-    plt.ylabel("Theta Y Position")
+    plt.xlabel("Theta X Angle(rad)")
+    plt.ylabel("Theta Y Angle(rad)")
     plt.title("Trajectory of Theta X and Theta Y Positions in MPC")
     plt.legend()
     plt.grid(True)
