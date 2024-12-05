@@ -27,7 +27,7 @@ tolerance =0.02
 # u_max = 4.9
 # tolerance =0.01
 
-case = 1   # 1 = static obstacle || 2=circular traj following || 3 = known dynamic obs avoidance
+case = 2  # 1 = static obstacle || 2=circular traj following || 3 = known dynamic obs avoidance
 
 if case == 1:
     ballbot_mpc = BallbotMPC(Q, R, Qf, nx, nu, u_min, u_max)
@@ -165,11 +165,11 @@ if case == 2:
         # if iteration >50 and np.linalg.norm(x_current.flatten() - stop_coordinates) < tolerance:
         #     break
     plt.figure(figsize=(8, 8))
-    plt.plot(x_positions, y_positions, 'b-', label='Real Robot Trajectory') 
+    plt.plot(x_positions, y_positions, 'bo-', label='Real Robot Trajectory') 
     plt.plot(trajectory[:,0],trajectory[:,1],'-', label = 'Planned Trajectory') 
     plt.scatter(x_goal[1], x_goal[5], color='red', marker='o', label='Goal Position (1,1)')  
-    plt.xlabel("X Position")
-    plt.ylabel("Y Position")
+    plt.xlabel("X Position(m)")
+    plt.ylabel("Y Position(m)")
     plt.title("Trajectory of X and Y Positions in MPC")
     plt.legend()
     plt.grid(True)
@@ -178,8 +178,8 @@ if case == 2:
     plt.figure(figsize=(8, 8))
     plt.plot(thetax_positions, thetay_positions, 'go-', label='Tilt Trajectory')  
     plt.scatter(0, 0, color='red', marker='o', label='Goal Orientation (0,0)')  
-    plt.xlabel("Theta X Position")
-    plt.ylabel("Theta Y Position")
+    plt.xlabel("Theta X Position(rad)")
+    plt.ylabel("Theta Y Position(rad)")
     plt.title("Trajectory of Theta X and Theta Y Positions in MPC")
     plt.legend()
     plt.grid(True)
