@@ -279,13 +279,14 @@ class BallbotMPC_DO:
 Q = np.diag([10, 50, 5, 5, 10, 50, 5, 5])
 R = np.diag([5,5])
 Qf = np.diag([8, 5, 8, 10, 8, 5, 8, 10])
-x_goal = np.array([0, 1.5, 0, 0, 0, 2, 0, 0])
+# x_goal = np.array([0, 1.5, 0, 0, 0, 2, 0, 0])
+x_goal = np.array([0, 1.2, 0, 0, 0, 2, 0, 0])
 x_current = np.zeros((8, 1)).flatten()
 nx = 8
 nu = 2
 u_min = -5
 u_max = 5
-tolerance =0.5
+tolerance =0.01
 
 u_current = np.zeros((nu))
 
@@ -312,13 +313,13 @@ obs_look_ahead = 0
 
 x_current_ref = np.array([0, x_current[1], 0, 0, 0, x_current[5], 0, 0])
 
-x_ref_seg = np.linspace(x_current.flatten(), x_goal, 20)
+# x_ref_seg = np.linspace(x_current.flatten(), x_goal, 20)
 
 while error >= tolerance:
 # while iteration < 19:
     obs1_traj_slice = obs1_traj[:,iteration+obs_look_ahead:iteration + ballbot_mpc.N+obs_look_ahead]
     obs2_traj_slice = obs2_traj[:,iteration+obs_look_ahead:iteration+ ballbot_mpc.N+obs_look_ahead]
-    x_ref = np.linspace(x_ref_seg[iteration], x_ref_seg[iteration+1],ballbot_mpc.N)
+    # x_ref = np.linspace(x_ref_seg[iteration], x_ref_seg[iteration+1],ballbot_mpc.N)
 
     x_current, u_current = ballbot_mpc.compute_mpc(x_current, u_current, x_goal,obs_radius,obs1_traj_slice, obs2_traj_slice)
     x_pos.append(x_current[1])
@@ -337,27 +338,49 @@ while error >= tolerance:
 
     iteration += 1
     print(iteration)
-print(thetay_positions)
-print(thetax_positions)
+
+print("theta_y_pos",thetay_positions)
+print("theta_x_pos",thetax_positions)
+print("x_pos",x_pos)
+print("y_pos",y_pos)
 print("u1_list",u1_list)
 print("u2_list",u2_list)
 
 
 
 plt.figure(figsize=(8, 8))
-plt.xlim(-1, 1)  # Set x-axis limits (min, max)
-plt.ylim(-1, 1)  # Set y-axis limits (min, max)
-plt.plot(x_pos, y_pos, 'bo-', label='Trajectory')  
+plt.xlim(-1, 2.5)  # Set x-axis limits (min, max)
+plt.ylim(-1, 2.5)  # Set y-axis limits (min, max)
+
+# Plot trajectory
+plt.plot(x_pos, y_pos, 'bo-', label='Trajectory')
+# Mark the point at [1.2, 2] with a red dot
+plt.plot(1.2, 2, 'ro', label='Point [1.2, 2]')
+
+# Add labels and title
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("Ballbot Trajectory")
+
+# Add legend
+plt.legend()
+# Display the plot
 plt.show()
+
+
+
 
 plt.figure(figsize=(10, 10))
 plt.plot(thetay_positions, thetax_positions, 'bo-', label='Trajectory')  
+plt.xlabel("theta_x")
+plt.ylabel("theta_y")
+plt.title("Ballbot Tilt Angle")
 plt.show()
 
 
 fig, ax = plt.subplots()
-ax.set_xlim(-1, 4)
-ax.set_ylim(-1, 4)
+ax.set_xlim(-1, 3)
+ax.set_ylim(-1, 3)
 ax.set_aspect('equal')
 ax.set_title("Dynamic Obstacles and Robot Trajectory")
 
@@ -369,6 +392,8 @@ ax.add_artist(obs2_circle)
 
 # Add robot trajectory
 robot_line, = ax.plot([], [], 'g-', label="Robot Trajectory")
+goal_x, goal_y = 1.2, 2
+ax.plot(goal_x, goal_y, 'ro', label="Goal Point") 
 
 # Update function for animation
 def update(frame):
