@@ -15,6 +15,12 @@ def generate_launch_description():
     with open(urdf_file_path, 'r') as urdf_file:
         robot_description_content = urdf_file.read()
 
+    full_mpc_directory = os.path.join(
+        get_package_share_directory('ballbot_visualization_pkg'),
+        'src'
+    )
+    os.environ['PYTHONPATH'] = f"{os.environ.get('PYTHONPATH', '')}:{full_mpc_directory}"
+
     # Launch description
     return LaunchDescription([
         # Robot State Publisher
@@ -38,11 +44,18 @@ def generate_launch_description():
             ]
         ),
         # State Publisher Node
+        # Node(
+        #     package='ballbot_visualization_pkg',
+        #     executable='state_publisher',
+        #     name='state_publisher',
+        #     output='screen'
+        # ),
         Node(
             package='ballbot_visualization_pkg',
             executable='state_publisher',
             name='state_publisher',
-            output='screen'
+            output='screen',
+            additional_env={'PYTHONPATH': f"{os.environ.get('PYTHONPATH', '')}:{full_mpc_directory}"}
         ),
     ])
 

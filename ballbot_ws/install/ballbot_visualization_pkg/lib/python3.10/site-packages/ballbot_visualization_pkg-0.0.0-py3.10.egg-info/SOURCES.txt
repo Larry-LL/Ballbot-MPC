@@ -8,6 +8,10 @@ setup.py
 ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/requires.txt
 ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/top_level.txt
 ../../build/ballbot_visualization_pkg/ballbot_visualization_pkg.egg-info/zip-safe
+./ballbot_visualization_pkg/Full_mpc.py
+./ballbot_visualization_pkg/__init__.py
+./ballbot_visualization_pkg/state_publisher.py
+ballbot_visualization_pkg/Full_mpc.py
 ballbot_visualization_pkg/__init__.py
 ballbot_visualization_pkg/state_publisher.py
 launch/ballbot_visualization.launch.py
