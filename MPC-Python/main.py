@@ -133,7 +133,7 @@ if case == 2:
     thetay_positions = []
     thetax_positions = []
     iteration = 0
-    ahead_ref_idx = 3
+    ahead_ref_idx = 2
     start = np.array([0,0])
     target_center = [1,1]
     target_radius = 1
@@ -167,7 +167,7 @@ if case == 2:
     plt.figure(figsize=(8, 8))
     plt.plot(x_positions, y_positions, 'bo-', label='Real Robot Trajectory') 
     plt.plot(trajectory[:,0],trajectory[:,1],'-', label = 'Planned Trajectory') 
-    plt.scatter(x_goal[1], x_goal[5], color='red', marker='o', label='Goal Position (1,1)')  
+    plt.scatter(x_goal[1], x_goal[5], color='red', marker='o', label='Goal Position')  
     plt.xlabel("X Position(m)")
     plt.ylabel("Y Position(m)")
     plt.title("Trajectory of X and Y Positions in MPC")
