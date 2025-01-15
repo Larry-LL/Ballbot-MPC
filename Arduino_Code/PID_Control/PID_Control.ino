@@ -6,6 +6,7 @@
 #include <PID_v1.h>
 #include <math.h>
 using namespace BLA;
+uint16_t BNO055_SAMPLERATE_DELAY_MS = 2000;
 
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
@@ -78,22 +79,29 @@ double tiltX = 0;
 double tiltY = 0;
 double tiltZ = 0;
 
+double rollOffset = 0 ; 
+double yawOffset = 0;
+double pitchOffset = 0;
+
+
 // PWM Control
-double Kp = 250, Ki = 0, Kd = 0;
+double Kp = 800, Ki = 3, Kd = 100; //800 3 100
 double ux, uy;
 double setpointX = 0, setpointY = 0;
 
 PID pidX(&tiltX, &ux, &setpointX, Kp, Ki, Kd, DIRECT);
 PID pidY(&tiltY, &uy, &setpointY, Kp, Ki, Kd, DIRECT);
 
-
-
-
 void setup() {
-  
+  pinMode(10,OUTPUT);
+  pinMode(9,OUTPUT);
+  digitalWrite(9,LOW); 
+  digitalWrite(10,LOW);
   //Motor 1 setup
   pinMode(Motor1_dir_1, OUTPUT);
   pinMode(Motor1_dir_2, OUTPUT);
+  digitalWrite(Motor1_dir_1, HIGH);
+  digitalWrite(Motor1_dir_2, LOW);
   ledcAttach(PWM_pin_1, PWM_freq, PWM_resolution);
 
   //Motor 2 setup
@@ -113,12 +121,36 @@ void setup() {
   //PID SETUP
   pidX.SetMode(AUTOMATIC);
   pidY.SetMode(AUTOMATIC);
+  pidX.SetOutputLimits(-8000, 8000);  // Example: for 12-bit PWM
+  pidY.SetOutputLimits(-8000, 8000);
+  pidX.SetSampleTime(20);
+  pidY.SetSampleTime(20);
 
   Serial.begin(115200);
 
+  //IMU SETUP 
+    //IMU SETUP
+  while (!Serial) delay(10);  // wait for serial port to open!
+  Serial.println("Orientation Sensor Test");
+  Serial.println("");
+  /* Initialise the sensor */
+  if (!bno.begin()) {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while (1)
+      ;
+  }
+  delay(1000);
+
+  sensors_event_t orientationData;
+  sensors_event_t linearAccelData;
+  bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
+  bno.getEvent(&linearAccelData, Adafruit_BNO055::VECTOR_LINEARACCEL);
+  rollOffset = orientationData.orientation.x;
+  pitchOffset = orientationData.orientation.z;
+  yawOffset = orientationData.orientation.y;
 
 }
-
 
 
 void loop() {
@@ -132,47 +164,69 @@ void loop() {
   uint8_t system, gyro, accel, mag = 0;
   bno.getCalibration(&system, &gyro, &accel, &mag);
 
-  tiltX = -orientationData.orientation.z;  //theta_x  in deg
-  tiltY = -orientationData.orientation.y;    //theta_y  in deg
-  tiltZ = orientationData.orientation.x;
-  if (tiltZ < 180) {
-    tiltZ = -tiltZ;
-  }
-  else {
-    tiltZ = 360 - tiltZ;
-  }
-
-  pidX.Compute();
-  pidY.Compute();
-
-pwm_1 = -2 / 3 * uy;
-pwm_2 = 0.577 * ux + 1 / 3 * uy;
-pwm_3 = -0.577 * ux + 1 / 3 * uy;
-
-pwm_1 = constrain(pwm_1, -4095, 4095);
-pwm_2 = constrain(pwm_2, -4095, 4095);
-pwm_3 = constrain(pwm_3, -4095, 4095);
-
-writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
-writeMotor(pwm_2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
-writeMotor(pwm_3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
+tiltY = orientationData.orientation.z - pitchOffset;  //theta_x  in deg
+tiltX = -orientationData.orientation.y + yawOffset;   //theta_y  in deg
+tiltZ = orientationData.orientation.x;
+if (tiltZ < 180) {
+  tiltZ = -tiltZ;
+} else {
+  tiltZ = 360 - tiltZ;
+}
 
 
+bool pidXComputed = pidX.Compute();  // returns true if it computed, false otherwise
+bool pidYComputed = pidY.Compute();  // same here
+
+if (pidXComputed) {
+  Serial.println("PID X computed successfully");
+} else {
+  Serial.println("PID X not computed");
+}
+
+if (pidYComputed) {
+  Serial.println("PID Y computed successfully");
+} else {
+  Serial.println("PID Y not computed");
+}
 
 
-Serial.print(tiltX);
-Serial.print(" ");
-Serial.print(tiltY);
-Serial.print(" ");
-Serial.print(tiltZ);
-Serial.print(" ");
-Serial.print(pwm_1);
-Serial.print(" ");
-Serial.print(pwm_2);
-Serial.print(" ");
-Serial.println(pwm_3);
 
-delay(10);
+pwm_1 = -(2.0 / 3.0) * uy; 
+pwm_2 = 0.577 * ux + (1.0 / 3.0) * uy;
+pwm_3 = -0.577 * ux + (1.0 / 3.0) * uy;
+
+  // pwm_1 = constrain(pwm_1, -4095, 4095);
+  // pwm_2 = constrain(pwm_2, -4095, 4095);
+  // pwm_3 = constrain(pwm_3, -4095, 4095);
+
+  // pwm_1 = 4095;
+  // pwm_2 = 4095;
+  // pwm_3 = 4095; 
+
+
+  writeMotor(pwm_1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
+  writeMotor(pwm_2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
+  writeMotor(pwm_3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
+
+
+  Serial.print(tiltX);
+  Serial.print(" ");
+  Serial.print(tiltY);
+  Serial.print(" ");
+  Serial.print(tiltZ);
+  Serial.print(" ");
+  
+  Serial.print(ux);
+  Serial.print(" ");
+  Serial.print(uy);
+  Serial.print(" ");
+  Serial.print(pwm_1);
+  Serial.print(" ");
+  Serial.print(pwm_2);
+  Serial.print(" ");
+  Serial.println(pwm_3);
+
+  delay(20);
 
 }
 
