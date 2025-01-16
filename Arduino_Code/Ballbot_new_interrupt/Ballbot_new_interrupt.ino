@@ -21,7 +21,7 @@ int Motor_cpr = 64 ;
 int Gear_ratio = 150;
 
 //Motor #1 
-float pwm_1;    //motor 3 
+float pwm_1;     
 int duration_1 = 0;
 boolean Direction_1;
 byte encoder0PinALast_1;
