@@ -11,6 +11,7 @@ uint16_t BNO055_SAMPLERATE_DELAY_MS = 2000;
 
 // Check I2C device address and correct line below (by default address is 0x29 or 0x28)
 //                                   id, address
+
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &Wire);
 
 
@@ -520,22 +521,24 @@ ratio_3 = total_pwm3/4095;
 // }
 
 
-
+total_pwm1 = 4095; 
+total_pwm2 = 0;
+total_pwm3 = 0;
 writeMotor(total_pwm1, Motor1_dir_1, Motor1_dir_2, PWM_channel_1);
 writeMotor(total_pwm2, Motor2_dir_1, Motor2_dir_2, PWM_channel_2);
 writeMotor(total_pwm3, Motor3_dir_1, Motor3_dir_2, PWM_channel_3);
 
-Serial.println("State Matrix:");
-for (int i = 0; i < 8; i++) {
-  Serial.print("State_Matrix[");
-  Serial.print(i);
-  Serial.print("]: ");
-  Serial.println(State_Matrix(i),4);
-}
+// Serial.println("State Matrix:");
+// for (int i = 0; i < 8; i++) {
+//   Serial.print("State_Matrix[");
+//   Serial.print(i);
+//   Serial.print("]: ");
+//   Serial.println(State_Matrix(i),4);
+// }
 
-Serial.print(phi_dot_max_x);
+Serial.print(wheel_speed_1);
 Serial.print(" ");
-Serial.println(phi_dot_max_y);
+Serial.println(wheel_speed_2);
 
 
 
