@@ -107,22 +107,30 @@ double alpha = 1;
 unsigned long lastTime = 0;
 unsigned long time_interval = 0.2;
 
+//ball property
+double r_ball = 10;
+double r_wheel = 10;
+double alpha1 = 0, alpha2 = 120, alpha3 = 240;
 
 
 
 //PID name
 double Input_1, Input_2,Input_3;
-double Output_1,Output_2,Output_3;
-double Setpoint1 = 0.9 , Setpoint2 = 0,Setpoint3 = 0;
+double Output_1,Output_2,Output_3,Output_x,Output_y;
+double Setpoint1 = 0.9 , Setpoint2 = 0,Setpoint3 = 0,Setpoint_x = 0, setpoint_y = 0;
+double v_des_y, v_des_x;
 double Kp1= 700, Ki1= 70, Kd1= 20 ;
-double Kp2= 0,   Ki2= 0, Kd2= 0 ;
-double Kp3= 0,  Ki3= 0, Kd3= 0 ;
+double Kp2= 0,   Ki2= 0,  Kd2= 0 ;
+double Kp3= 0,   Ki3= 0,  Kd3= 0 ;
+double Kp_x = 10, Ki_x = 10, Kd_x = 10,Kp_y = 10, Ki_y = 10, Kd_y = 10;
+
 
 
 PID pid1(&wheel_speed_1, &Output_1, &Setpoint1, Kp1, Ki1, Kd1, DIRECT);
 PID pid2(&wheel_speed_2, &Output_2, &Setpoint2, Kp2, Ki2, Kd2, DIRECT);
 PID pid3(&wheel_speed_3, &Output_3, &Setpoint3, Kp3, Ki3, Kd3, DIRECT);
-
+PID tilt_x(&angleX, &Output_x, &Setpoint_x, Kp_x, Ki_x, Kd_x, DIRECT);
+PID tilt_y(&angleY, &Output_y, &setpoint_y, Kp_y, Ki_y, Kd_y, DIRECT);
 
 
 void setup() {
@@ -186,9 +194,7 @@ void setup() {
 
 
   
-  // pid1.SetSampleTime(10);
-  // pid2.SetSampleTime(10);
-  // pid3.SetSampleTime(10);
+
 
   Serial.begin(115200);
   //Start the encoder setup
@@ -275,6 +281,17 @@ void loop() {
   calculatRps(&pulseCount_3, &lastTime_3, &currentTime_3, &wheel_speed_3);
 
 
+  v_des_y = r_ball * Output_y;
+  v_des_x = r_ball * Output_x;
+
+
+  Setpoint1 = (r_ball / r_wheel) * ( -sin(radians(alpha1)) * v_des_x + cos(radians(alpha1)) * v_des_y );
+  Setpoint2 = (r_ball / r_wheel) * ( -sin(radians(alpha2)) * v_des_x + cos(radians(alpha2)) * v_des_y );
+  Setpoint3 = (r_ball / r_wheel) * ( -sin(radians(alpha3)) * v_des_x + cos(radians(alpha3)) * v_des_y );
+
+  
+  
+  
   
   pid1.Compute();  // returns true if it computed, false otherwise
   pid2.Compute();  // same here
